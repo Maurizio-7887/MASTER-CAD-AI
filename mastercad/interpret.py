@@ -14,7 +14,7 @@ def find_value(text,words):
 def interpret(text,previous=None):
     t=(text or "").lower().strip()
     if not t:raise ValueError("Descrivi il pezzo: tipo e misure in millimetri")
-    updating=bool(previous) and any(k in t for k in ("modifica","cambia","aumenta","riduci","allunga","accorcia","spessore","lunghezza","larghezza","diametro","foro","fori","arrotonda","altezza"))
+    updating=bool(previous) and any(k in t for k in ("modifica","cambia","aumenta","riduci","allunga","accorcia","spessore","spessa","lunghezza","lunga","larghezza","larga","diametro","foro","fori","arrotonda","altezza","alta","alto"))
     if updating:
         spec=dict(previous)
     else:
@@ -25,7 +25,7 @@ def interpret(text,previous=None):
         else:raise ValueError("Indica la forma: piastra, blocco, cilindro oppure staffa a L")
         spec={"kind":kind,"holes":[]}
     if spec["kind"]=="cylinder":
-        mapping={"diameter":["diametro"],"height":["altezza","alto"]}
+        mapping={"diameter":["diametro"],"height":["altezza","alta","alto"]}
     else:
         mapping={"length":["lunghezza","lunga","lungo"],"width":["larghezza","larga","largo"],"thickness":["spessore","spessa","spesso"]}
         if spec["kind"]=="l_bracket":mapping["height"]=["altezza","alto"]
