@@ -9,7 +9,16 @@ from .geometry import validate
 def operations(spec):
     s=validate(spec)
     kind=s["kind"]
-    if kind=="cylinder":
+    if kind=="flange":
+        steps=[
+            {"id":1,"operation":"sketch_circle","label":"Schizzo profilo esterno","parameters_mm":{"diameter":s["diameter"]}},
+            {"id":2,"operation":"extrude","label":"Estrusione flangia","parameters_mm":{"thickness":s["thickness"]}},
+            {"id":3,"operation":"pocket_through","label":"Foro centrale passante","parameters_mm":{"diameter":s["center_hole_diameter"]}},
+            {"id":4,"operation":"circular_pattern","label":"Fori di fissaggio su circonferenza","parameters_mm":{
+                "bolt_circle_diameter":s["bolt_circle_diameter"],
+                "hole_diameter":s["bolt_hole_diameter"],"count":s["bolt_hole_count"]}}
+        ]
+    elif kind=="cylinder":
         steps=[
             {"id":1,"operation":"sketch_circle","label":"Schizzo cerchio","parameters_mm":{"diameter":s["diameter"]}},
             {"id":2,"operation":"extrude","label":"Estrusione cilindro","parameters_mm":{"height":s["height"]}}
