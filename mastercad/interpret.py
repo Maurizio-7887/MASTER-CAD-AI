@@ -19,11 +19,32 @@ def interpret(text,previous=None):
         spec=dict(previous)
     else:
         if any(k in t for k in ("staffa a l","staffa ad l","squadretta","staffa angolare")):kind="l_bracket"
+        elif "flangia" in t:kind="flange"
         elif any(k in t for k in ("cilindro","disco")):kind="cylinder"
         elif "blocco" in t or "parallelepipedo" in t:kind="block"
         elif any(k in t for k in ("piastra","placca","staffa","supporto","basetta")):kind="plate"
         else:raise ValueError("Indica la forma: piastra, blocco, cilindro oppure staffa a L")
         spec={"kind":kind,"holes":[]}
+    if spec["kind"]=="flange":
+        mapping={
+            "diameter":["diametro esterno","diametro flangia"],
+            "thickness":["spessore","spessa"],
+            "center_hole_diameter":["foro centrale","diametro foro centrale"],
+            "bolt_circle_diameter":["interasse fori","diametro circonferenza fori"],
+            "bolt_hole_diameter":["diametro fori fissaggio","fori fissaggio","fori da"]
+        }
+        for key,words in mapping.items():
+            v=find_value(t,words)
+            if v is not None:spec[key]=v
+        count_match=re.search(r"\b(3|4|6|8)\s+fori\b",t)
+        if count_match:spec["bolt_hole_count"]=int(count_match.group(1))
+        else:
+            for word,val in (("tre",3),("quattro",4),("sei",6),("otto",8)):
+                if re.search(r"\b"+word+r"\s+fori\b",t):spec["bolt_hole_count"]=val;break
+        missing=[key for key in mapping if key not in spec]
+        if missing:
+            raise ValueError("Per la flangia mancano: "+", ".join(missing)+". Esempio: flangia diametro esterno 100 spessore 12 foro centrale 30 interasse fori 70 quattro fori fissaggio 8")
+        return validate(spec)
     if spec["kind"]=="cylinder":
         mapping={"diameter":["diametro"],"height":["altezza","alta","alto"]}
     else:
