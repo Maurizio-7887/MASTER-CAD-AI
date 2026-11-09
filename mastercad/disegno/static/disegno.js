@@ -22,7 +22,8 @@
     zoomEstensioni: zoomEstensioni, aggiorna: function () { prompt('Comando:'); attesa = null; selezionando = null; anteprima = []; disegna(); salvaLocale(); },
     scarica: function (nome, testo, mime) { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([testo], {type: mime || 'application/octet-stream'})); a.download = nome; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500); },
     apriFile: function (accept) { return new Promise(function (ris) { var f = $('file-dxf'); f.value = ''; f.accept = accept; f.onchange = function () { var x = f.files[0]; if (!x) return ris(null); var r = new FileReader(); r.onload = function () { ris(String(r.result)); }; r.readAsText(x); }; f.click(); }); },
-    solido: solido
+    solido: solido,
+    lavorazione: function (lav) { if (!window.MCADP) throw new Error('Pannello Progetto non disponibile'); return window.MCADP.aggiungi(lav); }
   };
   var cad = window.CAD.crea(io), S = cad.stato;
 
@@ -221,17 +222,25 @@
   new ResizeObserver(resize).observe(tela);
 
   // ── 3D ──
+  function mostra3d(j) {
+    vista3d.mostra(j.mesh.triangles);
+    $('dl-step').href = j.exports.step; $('dl-stl').href = j.exports.stl; $('download3d').hidden = false;
+    $('info3d').textContent = 'Ingombro ' + j.mesh.bounds.x + ' × ' + j.mesh.bounds.y + ' × ' + j.mesh.bounds.z + ' mm · volume ' + Math.round(j.mesh.volume_mm3).toLocaleString('it-IT') + ' mm³';
+    scrivi('Solido creato: ' + $('info3d').textContent + '. Scarica STEP o STL qui a destra.');
+  }
   async function solido(op, dati) {
+    if (window.MCADP) {          // la tavola diventa la base del progetto: le lavorazioni già decise restano
+      scrivi('Costruisco il solido 3D…');
+      await window.MCADP.impostaBase(op, dati);
+      return;
+    }
     scrivi('Costruisco il solido 3D…');
     var r = await fetch('/api/disegno/solido', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': CSRF},
       body: JSON.stringify(Object.assign({op: op, nome: $('nome-pezzo').value || ('Disegno ' + op)}, dati))});
     var j = await r.json().catch(function () { return {error: 'Risposta non valida dal server'}; });
     if (r.status === 401) { location.href = '/login?expired=1'; return; }
     if (!r.ok) throw new Error(j.error || 'Errore del motore 3D');
-    vista3d.mostra(j.mesh.triangles);
-    $('dl-step').href = j.exports.step; $('dl-stl').href = j.exports.stl; $('download3d').hidden = false;
-    $('info3d').textContent = 'Ingombro ' + j.mesh.bounds.x + ' × ' + j.mesh.bounds.y + ' × ' + j.mesh.bounds.z + ' mm · volume ' + Math.round(j.mesh.volume_mm3).toLocaleString('it-IT') + ' mm³ · ' + j.info.regioni + ' contorni, ' + j.info.fori + ' fori';
-    scrivi('Solido creato: ' + $('info3d').textContent + '. Scarica STEP o STL qui a destra.');
+    mostra3d(j);
     if (j.avviso) scrivi('⚠ ' + j.avviso);
   }
 
@@ -266,7 +275,7 @@
     scrivi(d.messaggio || 'Profilo caricato.');
     input.focus();
   });
-  window.MCAD = {cad: cad, scrivi: scrivi, zoomEstensioni: zoomEstensioni, aPx: aPx};
+  window.MCAD = {cad: cad, scrivi: scrivi, zoomEstensioni: zoomEstensioni, aPx: aPx, mostra3d: mostra3d};
   scrivi('MASTER CAD AI · Disegno. Scrivi un comando come in AutoCAD (es. L, C, REC, PL, TR, F, O, EXT) oppure F1 per l’elenco.');
   setTimeout(zoomEstensioni, 50);
   input.focus();

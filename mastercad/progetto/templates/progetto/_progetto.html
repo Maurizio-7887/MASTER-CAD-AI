@@ -1,0 +1,13 @@
+{# Progetto parametrico: indicazioni del tecnico + albero delle lavorazioni (pannello della pagina Disegno) #}
+<section class="panel" id="progetto">
+  <h2>🛠️ Progetto · albero delle lavorazioni</h2>
+  <p class="info" id="prog-base">Nessuna forma di base: disegna (o ricava dalla foto) il contorno e premi ESTRUDI o RIVOLUZIONE.</p>
+  <div class="actions"><button type="button" id="prog-alto" title="Pezzi a L, a gradini: la tavola è la vista dall’alto">Tavola = vista dall’alto</button><button type="button" id="prog-fronte" title="La tavola è la vista di fronte: x come la vista dall’alto, y = altezza">Tavola = vista di fronte</button></div>
+  <label for="prog-direttive">Indicazioni del tecnico (anche di massima)</label>
+  <textarea id="prog-direttive" rows="5" placeholder="es. spessore 15; diametro esterno 120; foro centrale Ø30 H7 con lamatura Ø40 profonda 5; 6 fori M8 lamati su interasse 90; foro M6 filettato profondo 12 in 0,45; tasca 30x20 profonda 4 in 0,-35 raggio 3; asola 30x8 verticale in -45,0; rialzo Ø60 alto 5; raccordo R1 spigoli superiori; smusso 0.5 bordi inferiori"></textarea>
+  <div class="actions"><button type="button" id="prog-applica">Applica indicazioni</button></div>
+  <ul id="prog-esito" class="esito"></ul>
+  <ol id="prog-albero" class="albero"></ol>
+  <div class="actions"><button type="button" id="prog-costruisci">Costruisci progetto 3D</button><button type="button" id="prog-svuota" class="sec">Svuota albero</button></div>
+  <p class="info">Comandi 3D dalla riga di comando: FORO (singolo, in serie polare o rettangolare), TASCA, ASOLA, RIALZO, RACCORDASPIGOLI, SMUSSASPIGOLI, GUSCIO. In 2D: SERIEPOLARE e SERIERETT come in AutoCAD. Le lavorazioni si possono sospendere o togliere: il pezzo si ricostruisce da capo.</p>
+</section>

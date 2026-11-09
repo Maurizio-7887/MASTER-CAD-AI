@@ -33,6 +33,12 @@ input,select{width:100%;padding:8px;background:#0b1a2d;color:#fff;border:1px sol
 table{width:100%;border-collapse:collapse;font-size:12px}td{border-top:1px solid #23405c;padding:4px;vertical-align:top}td:nth-child(2){color:#8fb3d1;font-family:ui-monospace,Consolas,monospace}
 details summary{cursor:pointer;font-weight:650}
 .coord-help{font:12px ui-monospace,Consolas,monospace;color:#cfe6ff;background:#0b1a2d;border-radius:8px;padding:8px;margin:8px 0}
+textarea{width:100%;padding:8px;background:#0b1a2d;color:#fff;border:1px solid #405d78;border-radius:7px;font:13px/1.4 system-ui;resize:vertical}
+.actions button.sec{background:#23405c}.actions button:disabled{opacity:.6;cursor:wait}
+.esito{margin:8px 0 0;padding-left:4px;list-style:none;font-size:12.5px;color:#9fe0bd}.esito .no{color:#efcb95}
+.albero{margin:10px 0 0;padding-left:22px;font-size:12.5px}.albero li{padding:5px 0;border-top:1px solid #23405c}
+.albero li>div{display:inline-flex;gap:4px;margin-left:6px}.albero li button{background:#1d3653;border:1px solid #33557a;color:#cfe6ff;border-radius:5px;padding:1px 7px;font:11.5px system-ui;cursor:pointer}
+.albero li small{display:block;color:#ff9b9b}.albero li.saltata>span{color:#ffb3b3}.albero li.sospesa>span{color:#7f98ae;text-decoration:line-through}
 @media(max-width:980px){main{grid-template-columns:1fr}#tavola{height:52vh}}
 </style>
 <script src="{{ url_for('disegno.static', filename='geometria2d.js') }}"></script>
@@ -55,9 +61,12 @@ details summary{cursor:pointer;font-weight:650}
         <button data-cmd="SPOSTA" title="M">Sposta</button><button data-cmd="COPIA" title="CO">Copia</button><button data-cmd="RUOTA" title="RO">Ruota</button>
         <button data-cmd="SPECCHIO" title="MI">Specchio</button><button data-cmd="SCALA" title="SC">Scala</button><button data-cmd="OFFSET" title="O">Offset</button>
         <button data-cmd="RACCORDO" title="F">Raccordo</button><button data-cmd="CIMA" title="CHA">Cima</button><button data-cmd="TAGLIA" title="TR">Taglia</button>
-        <button data-cmd="ESTENDI" title="EX">Estendi</button><button data-cmd="ESPLODI" title="X">Esplodi</button><button data-cmd="CANCELLA" title="E">Cancella</button></div>
+        <button data-cmd="ESTENDI" title="EX">Estendi</button><button data-cmd="ESPLODI" title="X">Esplodi</button><button data-cmd="SERIEPOLARE" title="ARRAYPOLAR">Serie polare</button><button data-cmd="SERIERETT" title="ARRAYRECT">Serie rett.</button><button data-cmd="CANCELLA" title="E">Cancella</button></div>
       <div class="gruppo"><span>Misura</span><button data-cmd="DIST" title="DI">Dist</button><button data-cmd="QUOTA" title="DLI">Quota</button><button data-cmd="LISTA" title="LI">Lista</button><button data-cmd="TESTO" title="T">Testo</button></div>
-      <div class="gruppo"><span>3D</span><button class="d3" data-cmd="ESTRUDI" title="EXT">Estrudi</button><button class="d3" data-cmd="RIVOLUZIONE" title="REV">Rivoluzione</button></div>
+      <div class="gruppo"><span>3D</span><button class="d3" data-cmd="ESTRUDI" title="EXT">Estrudi</button><button class="d3" data-cmd="RIVOLUZIONE" title="REV">Rivoluzione</button>
+        <button class="d3" data-cmd="FORO" title="HOLE">Foro</button><button class="d3" data-cmd="TASCA" title="POCKET">Tasca</button><button class="d3" data-cmd="ASOLA" title="SLOT">Asola</button>
+        <button class="d3" data-cmd="RIALZO" title="BOSS">Rialzo</button><button class="d3" data-cmd="RACCORDASPIGOLI" title="FILLETEDGE">Raccorda spigoli</button>
+        <button class="d3" data-cmd="SMUSSASPIGOLI" title="CHAMFEREDGE">Smussa spigoli</button><button class="d3" data-cmd="GUSCIO" title="SHELL">Guscio</button></div>
       <div class="gruppo"><span>File</span><button data-cmd="DXFIN" title="Apri un DXF di AutoCAD">Apri DXF</button><button data-cmd="DXFOUT" title="Scarica DXF">Salva DXF</button>
         <button data-cmd="ANNULLA" title="U · Ctrl+Z">↶ Annulla</button><button data-cmd="RIPRISTINA">↷</button><button data-cmd="ZOOM" title="Z">Zoom</button><button data-cmd="NUOVO">Nuovo</button></div>
     </div>
@@ -81,16 +90,18 @@ details summary{cursor:pointer;font-weight:650}
       <div class="actions" id="download3d" hidden><a class="dl" id="dl-step" href="#">Scarica STEP</a><a class="dl" id="dl-stl" href="#">Scarica STL</a></div>
       <p class="info">Bozza CAD: verifica quote, tolleranze, materiale e carichi prima di produrre.</p>
     </section>
+    {% include "progetto/_progetto.html" %}
     <section class="panel">
       <details open><summary>⌨️ Come si scrive, come in AutoCAD</summary>
         <div class="coord-help">100,50 &nbsp;→ punto assoluto<br>@30,0 &nbsp;→ 30 mm a destra dell’ultimo punto<br>@50&lt;45 → 50 mm a 45°<br>40 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ 40 mm verso il cursore (con ORTO: dritto)<br>INVIO o SPAZIO a vuoto → ripete l’ultimo comando<br>ESC → annulla · CANC → cancella la selezione</div>
-        <p class="info">Il 3D: disegna il contorno <b>chiuso</b> del pezzo; i contorni chiusi dentro diventano fori. ESTRUDI dà lo spessore; RIVOLUZIONE fa girare la mezza sezione attorno all’asse X (pezzi torniti).</p>
+        <p class="info">Il 3D: disegna il contorno <b>chiuso</b> del pezzo; i contorni chiusi dentro diventano fori. ESTRUDI dà lo spessore; RIVOLUZIONE fa girare la mezza sezione attorno all’asse X (pezzi torniti). Poi il pezzo si completa con FORO, TASCA, ASOLA, RIALZO, RACCORDASPIGOLI… o con le indicazioni del tecnico: ogni lavorazione resta nell’albero e si può cambiare.</p>
       </details>
       <details><summary>📋 Tutti i comandi</summary><table id="elenco-comandi"></table></details>
     </section>
   </aside>
 </main>
 <script src="{{ url_for('disegno.static', filename='disegno.js') }}"></script>
+<script src="{{ url_for('progetto.static', filename='progetto.js') }}"></script>
 <script src="{{ url_for('reverse.static', filename='foto.js') }}"></script>
 <script>
 document.getElementById('esci').onclick=async function(){await fetch('/logout',{method:'POST',headers:{'X-CSRF-Token':document.body.getAttribute('data-csrf')}});location.href='/login'};

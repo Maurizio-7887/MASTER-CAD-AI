@@ -44,6 +44,15 @@
     DXFIN: [['DXFIN', 'APRIDXF', 'APRI', 'OPEN', 'IMPORTA'], 'Apre un DXF fatto con AutoCAD'],
     NUOVO: [['NUOVO', 'NEW', 'CANCELLATUTTO'], 'Nuovo disegno vuoto'],
     SELEZIONATUTTO: [['SELEZIONATUTTO', 'TUTTO', 'ALL'], 'Seleziona tutti gli oggetti'],
+    SERIEPOLARE: [['SERIEPOLARE', 'ARRAYPOLAR', 'SERIEP', 'AP'], '2D: copie degli oggetti girate attorno a un centro (come ARRAYPOLAR)'],
+    SERIERETT: [['SERIERETT', 'ARRAYRECT', 'SERIER', 'AR', 'ARRAY'], '2D: copie degli oggetti in righe e colonne (come ARRAYRECT)'],
+    FORO: [['FORO', 'HOLE', 'FO'], '3D: foro sul pezzo (Ø o filetto M, passante o cieco, lamato o svasato), anche in serie [Polare/Rettangolare]'],
+    TASCA: [['TASCA', 'POCKET', 'TAS'], '3D: tasca rettangolare o tonda scavata nella faccia superiore'],
+    ASOLA: [['ASOLA', 'SLOT', 'ASO'], '3D: asola (foro allungato) fra due centri'],
+    RIALZO: [['RIALZO', 'BOSS', 'BORCHIA', 'MOZZO'], '3D: rialzo, borchia o mozzo sopra il pezzo'],
+    RACCORDASPIGOLI: [['RACCORDASPIGOLI', 'FILLETEDGE', 'RS'], '3D: raccorda gli spigoli del solido [Verticali/Superiori/Inferiori/Tutti]'],
+    SMUSSASPIGOLI: [['SMUSSASPIGOLI', 'CHAMFEREDGE', 'SS'], '3D: smussa gli spigoli del solido a 45°'],
+    GUSCIO: [['GUSCIO', 'SHELL', 'SVUOTA'], '3D: svuota il solido lasciando le pareti [aperto Sopra/Sotto/Chiuso]'],
     AIUTO: [['AIUTO', 'HELP', '?', 'COMANDI'], 'Elenco dei comandi']
   };
   var ALIAS = {};
@@ -398,13 +407,106 @@
       await io.solido('rivoluzione', {entita: ent, asse: [A, B], angolo: Math.min(360, g)});
       s.sel = [];
     };
+    // ── serie 2D, come ARRAYPOLAR / ARRAYRECT ──
+    C.SERIEPOLARE = async function () {
+      var ids = await selezione(); var orig = ids.map(perId).filter(Boolean); if (!orig.length) return;
+      var c = await punto('Specificare centro della serie'); if (!c || c.opzione) return;
+      var n = Math.round(await chiedi({prompt: 'Numero totale di elementi', tipo: 'numero', minimo: 2, predefinito: s.serieN || 6})); s.serieN = n;
+      var tot = await chiedi({prompt: 'Angolo da riempire (+ antiorario)', tipo: 'numero', predefinito: 360});
+      var passo = Math.abs(Math.abs(tot) - 360) < 1e-9 ? tot / n : tot / (n - 1);
+      for (var i = 1; i < n; i++) orig.forEach(function (e) { aggiungi(G.ruota(e, c, passo * i)); });
+      s.sel = []; scrivi('Serie polare: ' + n + ' elementi.');
+    };
+    C.SERIERETT = async function () {
+      var ids = await selezione(); var orig = ids.map(perId).filter(Boolean); if (!orig.length) return;
+      var nx = Math.round(await chiedi({prompt: 'Numero di colonne', tipo: 'numero', minimo: 1, predefinito: 3}));
+      var ny = Math.round(await chiedi({prompt: 'Numero di righe', tipo: 'numero', minimo: 1, predefinito: 2}));
+      var px = nx > 1 ? await chiedi({prompt: 'Distanza fra le colonne (mm)', tipo: 'numero', predefinito: 20}) : 0;
+      var py = ny > 1 ? await chiedi({prompt: 'Distanza fra le righe (mm)', tipo: 'numero', predefinito: 20}) : 0;
+      if (nx * ny > 2000) throw new Error('Troppe copie (massimo 2000)');
+      for (var j = 0; j < ny; j++) for (var i = 0; i < nx; i++) if (i || j) orig.forEach(function (e) { aggiungi(G.sposta(e, i * px, j * py)); });
+      s.sel = []; scrivi('Serie rettangolare: ' + nx + ' × ' + ny + '.');
+    };
+
+    // ── lavorazioni 3D del progetto: vanno nell'albero e il pezzo si ricostruisce ──
+    var lavora = async function (lav) { if (!io.lavorazione) throw new Error('Le lavorazioni 3D servono la pagina con il pannello Progetto'); await io.lavorazione(lav); };
+    async function datiForo() {
+      var d = await chiedi({prompt: 'Diametro del foro o filetto (es. 8 oppure M8)', tipo: 'testo', predefinito: s.foroD || '8'});
+      d = String(d).trim().toUpperCase().replace(',', '.'); s.foroD = d;
+      var f = {};
+      if (/^M\d+(\.5)?$/.test(d)) f.filetto = d; else { var v = numero(d); if (v === null || v <= 0) throw new Error('Diametro non valido: scrivi un numero (8) o un filetto (M8)'); f.d = v; }
+      var p = await chiedi({prompt: 'Profondità (mm)', tipo: 'numero', opzioni: {P: 'Passante'}, predefinito: 'P', minimo: 0.01});
+      if (!(p && p.opzione)) f.prof = p;
+      var fin = await chiedi({prompt: 'Finitura', tipo: 'opzione', opzioni: {N: 'Nessuna', L: 'Lamatura', S: 'Svasatura'}, predefinito: 'N'});
+      if (fin && fin.opzione === 'L') f.lamatura = {d: await chiedi({prompt: 'Diametro della lamatura', tipo: 'numero', minimo: 0.1}), prof: await chiedi({prompt: 'Profondità della lamatura', tipo: 'numero', minimo: 0.01})};
+      if (fin && fin.opzione === 'S') f.svasatura = {d: await chiedi({prompt: 'Diametro della svasatura', tipo: 'numero', minimo: 0.1}), angolo: 90};
+      return f;
+    }
+    C.FORO = async function () {
+      var c = await punto('Specificare centro del foro (snap al centro di un cerchio) o', null, {opzioni: {P: 'serie Polare', R: 'serie Rettangolare'}}); if (!c) return;
+      if (c.opzione === 'P') {
+        var cs = await punto('Specificare centro della serie'); if (!cs || cs.opzione) return;
+        var di = await chiedi({prompt: 'Interasse: diametro della circonferenza dei fori', tipo: 'numero', minimo: 0.1});
+        var n = Math.round(await chiedi({prompt: 'Numero di fori', tipo: 'numero', minimo: 1, predefinito: 4}));
+        var a0 = await chiedi({prompt: 'Angolo del primo foro', tipo: 'numero', predefinito: 0});
+        await lavora({tipo: 'serie_polare', centro: cs, diametro: di, n: n, angolo0: a0, foro: await datiForo()}); return;
+      }
+      if (c.opzione === 'R') {
+        var o = await punto('Specificare centro del primo foro (in basso a sinistra)'); if (!o || o.opzione) return;
+        var nx = Math.round(await chiedi({prompt: 'Fori per riga (colonne)', tipo: 'numero', minimo: 1, predefinito: 2}));
+        var ny = Math.round(await chiedi({prompt: 'Numero di righe', tipo: 'numero', minimo: 1, predefinito: 2}));
+        var px = nx > 1 ? await chiedi({prompt: 'Passo fra le colonne', tipo: 'numero'}) : 0, py = ny > 1 ? await chiedi({prompt: 'Passo fra le righe', tipo: 'numero'}) : 0;
+        await lavora({tipo: 'serie_rett', origine: o, nx: nx, ny: ny, passo_x: px, passo_y: py, foro: await datiForo()}); return;
+      }
+      await lavora(Object.assign({tipo: 'foro', x: c[0], y: c[1]}, await datiForo()));
+    };
+    async function sagoma(nome) {
+      var c = await punto('Specificare centro della ' + nome); if (!c || c.opzione) return null;
+      var f = await chiedi({prompt: 'Forma', tipo: 'opzione', opzioni: {R: 'Rettangolare', T: 'Tonda'}, predefinito: 'R'});
+      if (f && f.opzione === 'T') return {forma: 'cerchio', centro: c, d: await chiedi({prompt: 'Diametro', tipo: 'numero', minimo: 0.1})};
+      var l = await chiedi({prompt: 'Lunghezza (lungo X)', tipo: 'numero', minimo: 0.1}), w = await chiedi({prompt: 'Larghezza (lungo Y)', tipo: 'numero', minimo: 0.1});
+      var a = await chiedi({prompt: 'Rotazione (gradi)', tipo: 'numero', predefinito: 0}), r = await chiedi({prompt: 'Raggio degli angoli', tipo: 'numero', predefinito: 0, minimo: 0});
+      var x = {forma: 'rett', centro: c, l: l, w: w, angolo: a}; if (r > 0) x.raggio_angoli = r; return x;
+    }
+    C.TASCA = async function () {
+      var x = await sagoma('tasca'); if (!x) return;
+      var p = await chiedi({prompt: 'Profondità', tipo: 'numero', opzioni: {P: 'Passante'}, minimo: 0.01, predefinito: 5});
+      x.tipo = 'tasca'; x.prof = p && p.opzione ? null : p; await lavora(x);
+    };
+    C.RIALZO = async function () {
+      var x = await sagoma('base del rialzo'); if (!x) return;
+      x.tipo = 'rialzo'; x.h = await chiedi({prompt: 'Altezza del rialzo', tipo: 'numero', minimo: 0.01, predefinito: 5}); await lavora(x);
+    };
+    C.ASOLA = async function () {
+      var a = await punto('Specificare centro del primo arco dell’asola'); if (!a || a.opzione) return;
+      var b = await punto('Specificare centro del secondo arco', a, {anteprima: function (q) { return [{t: 'line', a: a, b: q}]; }}); if (!b || b.opzione) return;
+      var w = await chiedi({prompt: 'Larghezza dell’asola', tipo: 'numero', minimo: 0.1, predefinito: s.asolaW || 8}); s.asolaW = w;
+      var p = await chiedi({prompt: 'Profondità', tipo: 'numero', opzioni: {P: 'Passante'}, minimo: 0.01, predefinito: 'P'});
+      await lavora({tipo: 'asola', centro: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], lunghezza: G.dist(a, b) + w, larghezza: w, angolo: G.ang(a, b), prof: p && p.opzione ? null : p});
+    };
+    var SPIGOLI = {V: 'Verticali', S: 'Superiori', I: 'Inferiori', T: 'Tutti'};
+    C.RACCORDASPIGOLI = async function () {
+      var r = await chiedi({prompt: 'Raggio di raccordo', tipo: 'numero', minimo: 0.01, predefinito: s.rs || 2}); s.rs = r;
+      var q = await chiedi({prompt: 'Quali spigoli', tipo: 'opzione', opzioni: SPIGOLI, predefinito: 'V'});
+      await lavora({tipo: 'raccordo', r: r, spigoli: SPIGOLI[q.opzione || 'V'].toLowerCase()});
+    };
+    C.SMUSSASPIGOLI = async function () {
+      var d = await chiedi({prompt: 'Distanza di smusso (45°)', tipo: 'numero', minimo: 0.01, predefinito: s.ss || 1}); s.ss = d;
+      var q = await chiedi({prompt: 'Quali spigoli', tipo: 'opzione', opzioni: SPIGOLI, predefinito: 'S'});
+      await lavora({tipo: 'smusso', d: d, spigoli: SPIGOLI[q.opzione || 'S'].toLowerCase()});
+    };
+    C.GUSCIO = async function () {
+      var sp = await chiedi({prompt: 'Spessore delle pareti', tipo: 'numero', minimo: 0.1, predefinito: 2});
+      var q = await chiedi({prompt: 'Faccia da togliere', tipo: 'opzione', opzioni: {S: 'Sopra', T: 'soTto', C: 'Chiuso'}, predefinito: 'S'});
+      await lavora({tipo: 'guscio', spessore: sp, aperta: {S: 'sopra', T: 'sotto', C: 'nessuna'}[q.opzione || 'S']});
+    };
     C.AIUTO = async function () {
       scrivi('COMANDI (italiano · inglese · alias):');
       Object.keys(COMANDI).forEach(function (k) { scrivi('  ' + COMANDI[k][0].join(' · ') + ' — ' + COMANDI[k][1]); });
       scrivi('Coordinate: x,y · @dx,dy · @distanza<angolo · un numero = distanza verso il cursore. INVIO/SPAZIO ripete l’ultimo comando. ESC annulla.');
     };
 
-    var nonModificano = {ZOOM: 1, DIST: 1, ID: 1, LISTA: 1, ORTO: 1, OSNAP: 1, SNAP: 1, AIUTO: 1, DXFOUT: 1, ANNULLA: 1, RIPRISTINA: 1, SELEZIONATUTTO: 1, ESTRUDI: 1, RIVOLUZIONE: 1};
+    var nonModificano = {ZOOM: 1, DIST: 1, ID: 1, LISTA: 1, ORTO: 1, OSNAP: 1, SNAP: 1, AIUTO: 1, DXFOUT: 1, ANNULLA: 1, RIPRISTINA: 1, SELEZIONATUTTO: 1, ESTRUDI: 1, RIVOLUZIONE: 1, FORO: 1, TASCA: 1, ASOLA: 1, RIALZO: 1, RACCORDASPIGOLI: 1, SMUSSASPIGOLI: 1, GUSCIO: 1};
     async function esegui(testo) {
       var nome = String(testo || '').trim().toUpperCase().replace(/^[_.'-]+/, '');
       if (!nome) { if (!s.ultimoComando) return; nome = s.ultimoComando; }

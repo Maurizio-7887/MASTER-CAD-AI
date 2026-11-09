@@ -22,7 +22,9 @@ def mesh_fine(solido, max_triangoli=24000):
     vertici, facce = solido.tessellate(tol, 0.2)
     salto = max(1, math.ceil(len(facce) / max_triangoli))
     tri = [[[round(vertici[j].x, 3), round(vertici[j].y, 3), round(vertici[j].z, 3)] for j in f] for f in facce[::salto]]
-    return {"triangles": tri, "bounds": {"x": round(box.xlen, 2), "y": round(box.ylen, 2), "z": round(box.zlen, 2)},
+    # ingombro dai vertici: il riquadro di OpenCascade è largo di qualche centesimo
+    lato = lambda k: round(max(getattr(v, k) for v in vertici) - min(getattr(v, k) for v in vertici), 2) if vertici else 0
+    return {"triangles": tri, "bounds": {"x": lato("x"), "y": lato("y"), "z": lato("z")},
             "volume_mm3": round(solido.Volume(), 3)}
 
 

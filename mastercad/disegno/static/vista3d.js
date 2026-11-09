@@ -12,7 +12,7 @@
       var mid = lo.map(function (x, k) { return (x + hi[k]) / 2; }), span = Math.max(1, hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
       var sc = Math.min(w, h) * .62 * zoom / span, cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
       var pr = function (p) { var x = p[0] - mid[0], y = p[1] - mid[1], z = p[2] - mid[2], rx = x * cy - y * sy, ry = x * sy + y * cy; return [w / 2 + rx * sc, h / 2 - (ry * sp + z * cp) * sc, (ry * cp - z * sp) * sc]; };
-      var facce = tri.map(function (f) { var v = f.map(pr); return {v: v, f: f, z: (v[0][2] + v[1][2] + v[2][2]) / 3}; }).sort(function (a, b) { return a.z - b.z; });
+      var facce = tri.map(function (f) { var v = f.map(pr); return {v: v, f: f, z: (v[0][2] + v[1][2] + v[2][2]) / 3}; }).sort(function (a, b) { return b.z - a.z; });   // prima i più lontani (pittore)
       // luce fissa rispetto alla vista: normale vera del triangolo nello spazio della camera
       facce.forEach(function (f) {
         var p = f.v, a = [p[1][0] - p[0][0], p[0][1] - p[1][1], p[1][2] - p[0][2]], b = [p[2][0] - p[0][0], p[0][1] - p[2][1], p[2][2] - p[0][2]];

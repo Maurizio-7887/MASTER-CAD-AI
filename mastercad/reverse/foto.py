@@ -110,16 +110,18 @@ def _semplifica(c, frazione=0.004):
 
 
 def contorni_da_alto(maschera, mm_px):
-    """Contorno esterno e fori → entità in mm (y verso l'alto, origine nell'angolo in basso a sinistra)."""
+    """Contorno esterno e fori → entità in mm (y verso l'alto; origine nell'angolo in basso a sinistra, al centro se il pezzo è tondo)."""
     cont, gerarchia = cv2.findContours(maschera, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
     if not cont:
         raise ValueError("Nessun contorno trovato")
     i_est = max(range(len(cont)), key=lambda i: cv2.contourArea(cont[i]) if gerarchia[0][i][3] < 0 else -1)
     est = cont[i_est]
     x0, y0, cw, ch = cv2.boundingRect(est)
-    trasf = lambda p: [round((p[0] - x0) * mm_px, 2), round((y0 + ch - p[1]) * mm_px, 2)]
-    entita, fori = [], 0
     tondo = _cerchio_se_tondo(est)
+    # origine come la quota il tecnico: angolo in basso a sinistra, o il centro se il pezzo è tondo (flange, dischi)
+    ox, oy = (tondo[0][0], tondo[0][1]) if tondo else (x0, y0 + ch)
+    trasf = lambda p: [round((p[0] - ox) * mm_px, 2), round((oy - p[1]) * mm_px, 2)]
+    entita, fori = [], 0
     if tondo:
         entita.append({"t": "circle", "c": trasf(tondo[0]), "r": round(tondo[1] * mm_px, 2)})
     else:
