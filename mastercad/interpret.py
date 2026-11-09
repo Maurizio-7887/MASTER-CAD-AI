@@ -28,7 +28,7 @@ def interpret(text,previous=None):
         mapping={"diameter":["diametro"],"height":["altezza","alta","alto"]}
     else:
         mapping={"length":["lunghezza","lunga","lungo"],"width":["larghezza","larga","largo"],"thickness":["spessore","spessa","spesso"]}
-        if spec["kind"]=="l_bracket":mapping["height"]=["altezza","alto"]
+        if spec["kind"]=="l_bracket":mapping["height"]=["altezza","alta","alto"]
     for key,words in mapping.items():
         v=find_value(t,words)
         if v is not None:spec[key]=v
