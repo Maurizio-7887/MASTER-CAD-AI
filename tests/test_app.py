@@ -32,6 +32,28 @@ class CADTests(unittest.TestCase):
         self.assertEqual(changed["height"],45)
         self.assertEqual(changed["kind"],"l_bracket")
 
+    def test_industrial_flange_with_bolt_circle(self):
+        phrase="Crea una flangia diametro esterno 100 mm spessore 12 mm foro centrale 30 mm interasse fori 70 mm quattro fori fissaggio 8 mm"
+        spec=interpret(phrase)
+        self.assertEqual(spec["kind"],"flange")
+        self.assertEqual(spec["bolt_hole_count"],4)
+        self.assertEqual(spec["center_hole_diameter"],30)
+        self.assertEqual(spec["bolt_circle_diameter"],70)
+        self.assertEqual(spec["bolt_hole_diameter"],8)
+        shape,solid,_=build(spec)
+        self.assertTrue(solid.isValid())
+        self.assertGreater(solid.Volume(),70000)
+        self.assertLess(solid.Volume(),90000)
+        self.assertTrue(mesh_data(solid)["triangles"])
+        from mastercad.history import operations
+        self.assertEqual(operations(spec)["steps"][-1]["operation"],"circular_pattern")
+
+    def test_flange_rejects_intersecting_holes(self):
+        with self.assertRaises(ValueError):
+            validate({"kind":"flange","diameter":100,"thickness":12,
+                      "center_hole_diameter":50,"bolt_circle_diameter":60,
+                      "bolt_hole_diameter":18,"bolt_hole_count":4})
+
     def test_missing_dimensions(self):
         with self.assertRaisesRegex(ValueError,"Mancano le quote"):
             interpret("Fai una piastra lunga 100")
