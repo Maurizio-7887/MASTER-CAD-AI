@@ -17,11 +17,11 @@ button.alt,.download.alt{background:#294764}button:disabled{opacity:.5}button:ho
 #viewport{width:100%;height: min(63vh,620px);min-height:330px;background:#11253a;border-radius:12px;border:1px solid #345574;touch-action:none;cursor:grab}
 .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 #status{margin-top:12px;min-height:30px}.error{color:#ff979e}.success{color:#77e1b4}
-.metrics{display:flex;gap:10px;margin-top:12px}.metric{flex:1;min-width:0;background:#0c1c2d;padding:9px;border-radius:7px;text-align:center}
+.header-actions{display:flex;align-items:center;gap:12px}.header-actions button{padding:8px 15px}.metrics{display:flex;gap:10px;margin-top:12px}.metric{flex:1;min-width:0;background:#0c1c2d;padding:9px;border-radius:7px;text-align:center}
 .metric strong{display:block;font-size:18px}.metric small{color:#abc2d6}.download{display:inline-block;margin-top:13px}
-@media(max-width:840px){main{grid-template-columns:1fr}header{padding:13px}#viewport{height:45vh}}
+@media(max-width:840px){main{grid-template-columns:1fr}header{padding:13px}#viewport{height:45vh}.header-actions{gap:6px}.tag{display:none}}
 </style></head><body>
-<header><h1>MASTER <span>CAD AI</span></h1><span class="tag" id="mode">● CAD online</span></header>
+<header><h1>MASTER <span>CAD AI</span></h1><div class="header-actions"><span class="tag" id="mode">● CAD online</span><button class="alt" id="logout" type="button" aria-label="Esci dal programma">Esci</button></div></header>
 <main><aside>
 <section class="panel"><h2>1 · Descrivi il pezzo, anche a voce</h2>
 <p class="info">Non occorre conoscere comandi CAD. Indica forma e misure in millimetri. Il riconoscimento vocale del browser potrebbe usare servizi esterni.</p>
@@ -74,6 +74,25 @@ button.alt,.download.alt{background:#294764}button:disabled{opacity:.5}button:ho
 <script>
 const CSRF=/*__CSRF__*/;
 const el=id=>document.getElementById(id);
+// All API calls use this single guard: expired/invalid sessions go to login
+// instead of leaving the editor visible with a confusing 401 JSON error.
+const originalFetch=window.fetch.bind(window);
+window.fetch=async (...args)=>{
+ const response=await originalFetch(...args);
+ if(response.status===401){
+  window.location.replace('/login?expired=1');
+  throw new Error('Sessione scaduta: effettua nuovamente l’accesso');
+ }
+ return response;
+};
+el('logout').onclick=async()=>{
+ const button=el('logout');button.disabled=true;button.textContent='Uscita…';
+ try{
+  const response=await originalFetch('/logout',{method:'POST',headers:{'X-CSRF-Token':CSRF},credentials:'same-origin'});
+  if(!response.ok)throw new Error('Impossibile terminare la sessione');
+  window.location.replace('/login');
+ }catch(err){message(err.message,true);button.disabled=false;button.textContent='Esci'}
+};
 let spec=null,triangles=[],yaw=.65,pitch=.4,zoom=1,drag=null;
 const canvas=el('viewport'),ctx=canvas.getContext('2d');
 function message(s,error=false){el('status').textContent=s;el('status').className=error?'error':'success'}
