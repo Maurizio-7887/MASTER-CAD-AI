@@ -17,7 +17,7 @@ class CADTests(unittest.TestCase):
         self.assertGreater(build(s)[1].Volume(),58000)
     def test_bracket(self):
         s=interpret("Staffa a L lunghezza 120 mm larghezza 60 mm spessore 5 mm altezza 45 mm")
-        self.assertGreater(build(s)[1].Volume(),60000)
+        self.assertAlmostEqual(build(s)[1].Volume(),60000,places=2)
     def test_missing_dimensions(self):
         with self.assertRaisesRegex(ValueError,"Mancano le quote"):
             interpret("Fai una piastra lunga 100")
