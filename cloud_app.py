@@ -10,7 +10,7 @@ app=Flask(__name__)
 app.config.update(SECRET_KEY=os.getenv("FLASK_SECRET_KEY") or secrets.token_urlsafe(48),
                   SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax",
                   SESSION_COOKIE_SECURE=os.getenv("COOKIE_SECURE","1")!="0",
-                  MAX_CONTENT_LENGTH=1_000_000)
+                  MAX_CONTENT_LENGTH=5_000_000)
 OUTPUT=Path(os.getenv("MASTER_CAD_OUTPUT","/tmp/mastercad-projects"))
 _LOCK=threading.Lock()
 LOGIN="""<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MASTER CAD AI · Accesso</title>
