@@ -5,7 +5,9 @@ import json
 from contextlib import contextmanager
 
 import psycopg2
-from psycopg2.extras import Json, RealDictCursor
+from psycopg2.extras import Json, RealDictCursor, register_uuid
+
+register_uuid()
 
 
 def dsn():
