@@ -56,6 +56,13 @@ button.alt,.download.alt{background:#294764}button:disabled{opacity:.5}button:ho
 <a id="step" class="download" style="display:none" download>↓ Scarica STEP</a>
 <a id="stl" class="download alt" style="display:none" download>↓ Scarica STL</a>
 <p class="alert">⚠️ Un file CAD non certifica la sicurezza: per componenti automobilistici e parti soggette a carichi serve verifica professionale di materiali, quote, tolleranze e resistenza prima della produzione.</p></section>
+<section class="panel"><h2>Progetti salvati in PostgreSQL</h2>
+<p class="info">I modelli, le quote e i file STEP/STL restano disponibili dopo il riavvio del servizio.</p>
+<div class="actions"><button class="alt" id="projects-refresh">Aggiorna archivio</button></div>
+<select id="projects-list" aria-label="Progetti CAD salvati" style="margin-top:10px"><option value="">Scegli un progetto</option></select>
+<button class="alt" id="projects-load" style="margin-top:10px">Apri progetto selezionato</button>
+<p class="info" id="projects-note"></p>
+</section>
 <section class="panel"><h2>Albero di costruzione CAD</h2>
 <p class="info">Queste sono le operazioni realmente effettuate per costruire il tuo solido parametrico, non una cronologia ricavata dalla fotografia.</p>
 <ol id="cad-history" style="color:#d1e6f2;padding-left:22px"><li>Nessun modello costruito</li></ol></section>
@@ -111,9 +118,42 @@ async function build(){
     li.textContent=step.label+' — '+param;
     history.appendChild(li);
   }
-  message('Modello generato: ruota e scarica STEP o STL');draw()
+  message('Modello generato e salvato in PostgreSQL: ruota e scarica STEP o STL');draw();refreshProjects()
  }catch(e){message(e.message,true)}
 }
+async function refreshProjects(){
+ try{
+  const response=await fetch('/api/projects',{credentials:'same-origin'});
+  if(!response.ok)throw Error('Archivio progetti non disponibile');
+  const rows=await response.json();
+  const select=el('projects-list');select.replaceChildren();
+  select.add(new Option('Scegli un progetto',''));
+  for(const p of rows){
+   select.add(new Option(p.name+' · '+new Date(p.created_at).toLocaleString('it-IT'),p.id));
+  }
+  el('projects-note').textContent=rows.length+' progetti disponibili (ultimi 30)';
+ }catch(e){el('projects-note').textContent=e.message}
+}
+el('projects-refresh').onclick=refreshProjects;
+el('projects-load').onclick=async()=>{
+ const id=el('projects-list').value;
+ if(!id){message('Seleziona un progetto salvato',true);return}
+ try{
+  const response=await fetch('/api/projects/'+encodeURIComponent(id));
+  if(!response.ok)throw Error('Impossibile aprire il progetto');
+  const p=await response.json();
+  fields(p.spec);
+  const history=el('cad-history');history.replaceChildren();
+  for(const step of (p.history&&p.history.steps||[])){
+   const li=document.createElement('li');
+   li.textContent=step.label+' — '+Object.entries(step.parameters_mm||{}).map(([n,v])=>n+': '+v+' mm').join(' · ');
+   history.appendChild(li)
+  }
+  ['step','stl'].forEach(key=>{const a=el(key);a.href='/api/export/'+p.id.replaceAll('-','')+'?format='+key;a.style.display='inline-block'});
+  triangles=[];draw();
+  message('Quote caricate da PostgreSQL. Premi Aggiorna 3D per rigenerare l\'anteprima; esportazioni originali disponibili.');
+ }catch(e){message(e.message,true)}
+};
 el('interpret').onclick=interpret;el('build').onclick=async()=>{if(!spec&&!(await interpret()))return;await build()};
 el('rebuild').onclick=build;
 el('reset').onclick=()=>{spec=null;triangles=[];el('fields').replaceChildren();el('instruction').value='';['step','stl'].forEach(k=>el(k).style.display='none');message('Descrivi il nuovo pezzo');draw()};
@@ -217,5 +257,5 @@ fetch('/api/status').then(r=>r.json()).then(s=>{
   el('gpu-infer').textContent='Prova ricostruzione Image-to-CAD GPU';
  }
 }).catch(()=>{el('gpu-status').textContent='Stato GPU non verificabile';});
-resize();
+resize();refreshProjects();
 </script></body></html>
