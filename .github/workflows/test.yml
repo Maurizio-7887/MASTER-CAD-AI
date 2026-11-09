@@ -37,3 +37,5 @@ jobs:
           MASTER_CAD_OUTPUT: /tmp/cad-ai-test
           DATABASE_URL: postgresql://cadtest:cadtest@localhost:5432/mastercad
         run: python -m unittest discover -s tests -v
+      - name: Run AutoCAD command engine tests (JavaScript)
+        run: node tests/js/comandi.test.js

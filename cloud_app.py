@@ -9,14 +9,18 @@ from mastercad.image_quotes import inspect_image
 from mastercad.backends import capability, infer_with_gpu
 from mastercad.history import operations
 from mastercad.postgres_store import init_db, save_model, project_list, get_project, get_export, dsn
+from mastercad.disegno import bp as disegno_bp
+from mastercad.reverse import bp as reverse_bp
 
 app=Flask(__name__)
 app.config.update(SECRET_KEY=os.getenv("FLASK_SECRET_KEY") or secrets.token_urlsafe(48),
                   SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax",
                   SESSION_COOKIE_SECURE=os.getenv("COOKIE_SECURE","1")!="0",
-                  MAX_CONTENT_LENGTH=5_000_000,
+                  MAX_CONTENT_LENGTH=16_000_000,
                   PERMANENT_SESSION_LIFETIME=timedelta(hours=8))
 OUTPUT=Path(os.getenv("MASTER_CAD_OUTPUT","/tmp/mastercad-projects"))
+app.register_blueprint(disegno_bp)
+app.register_blueprint(reverse_bp)
 _LOCK=threading.Lock()
 LOGIN="""<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MASTER CAD AI · Accesso</title>
 <style>body{background:#0b1424;color:#e5f2ff;display:grid;place-items:center;min-height:100vh;font:16px system-ui}main{background:#15253b;border:1px solid #36546d;border-radius:16px;padding:30px;width:min(400px,85vw)}input,button{width:100%;box-sizing:border-box;padding:14px;margin-top:12px;border-radius:8px;font:inherit}input{background:#101a2b;color:white;border:1px solid #658099}button{background:#208aad;color:white;border:0;cursor:pointer}.err{color:#ffb0b0}</style></head><body><main><h1>MASTER CAD AI</h1><p>CAD 3D da voce e descrizioni in italiano</p>
