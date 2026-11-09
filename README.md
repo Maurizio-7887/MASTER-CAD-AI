@@ -8,7 +8,7 @@ Prototipo **CAD 3D online** utilizzabile da browser, senza licenze CAD a pagamen
 - Visualizzatore 3D interattivo, download di geometrie STEP e STL
 - Voce dal browser (Web Speech API): su alcuni browser può usare servizi esterni, **non è trascrizione locale o offline**
 - Nessun codice arbitrario generato dall'AI: interprete linguistico deterministico. Non promette un CAD generativo universale.
-- Fotografie: solo riferimento visivo. **Non è ancora implementata la conversione foto → CAD.**
+- Disegni quotati: OCR online che estrae misure candidate; l'utente deve confermarle prima del CAD. Le foto senza quote non vengono ricostruite automaticamente.
 
 ## Deploy Railway
 1. Railway → New Project → Deploy from GitHub Repo → `Maurizio-7887/MASTER-CAD-AI`.
@@ -47,3 +47,23 @@ Per una fotografia senza misure il programma **non inventa la scala**, né ricos
 | FreeCAD | Licenze upstream da rispettare | Possibile integrazione kernel/workbench in futuro |
 
 **Non sono stati copiati sorgenti di questi ZIP nel progetto attuale**: la funzione OCR è una piccola implementazione originale che utilizza Tesseract. Il software CAD open source non richiede licenze a pagamento, ma Railway può addebitare hosting/risorse. Per un'inferenza neurale con Img2CAD servirebbe un ambiente CUDA, checkpoint compatibili, gestione delle licenze e test su parti meccaniche industriali. È improprio dichiarare automaticamente producibili pezzi ottenuti da un'immagine: occorre confermare quote, tolleranze, materiali e carichi.
+
+## Architettura ibrida attivabile in futuro — GPU temporaneamente bypassata
+
+L'app ospita ora un **selettore di backend** con modalità CPU su Railway e connettore **opzionale** verso un worker NVIDIA esterno. Senza le variabili GPU, la modalità CPU resta operativa; il sito espone chiaramente `GPU non collegata` e il pulsante GPU è disabilitato. Non installiamo PyTorch/CUDA nel Dockerfile Railway, preservando requisiti e tempi di avvio.
+
+Con un worker GPU autenticato e installato:
+- `MASTER_CAD_GPU_WORKER_URL=https://dominio-pubblico-https-del-worker`
+- `MASTER_CAD_GPU_WORKER_TOKEN=token-lungo-e-privato`
+
+Il worker, il suo protocollo e i requisiti dei checkpoint sono documentati in [gpu_worker/README.md](gpu_worker/README.md). **Non attivare le variabili fino a quando non esistono un worker funzionante, un adapter testato e i checkpoint.** Il semplice acquisto della scheda NVIDIA non basta a completare l'inferenza Img2CAD.
+
+Il generatore produce ora anche un **albero delle operazioni parametriche effettivamente eseguite**: schizzo, estrusione, raccordo e fori. Tale albero non è una ricostruzione neurale della storia originaria del pezzo fotografato.
+
+### Modelli sperimentali e licenze
+
+Img2CAD è un progetto accademico con licenza MIT per il codice: i checkpoint pubblici di LlamaFT/TrAssembler sono principalmente su classi di mobili. Non vengono copiati pesi o modelli nel repository; occorre verificare termini, hardware e precisione sulle geometrie industriali prima dell'adozione. GenCAD e CADAM rimangono riferimenti di ricerca, non componenti incorporati nell'app.
+
+### Limiti per produzione automobilistica
+
+La geometria CAD prodotta è una **bozza da verificare**. Nessun componente è certificato per auto, sicurezza o uso strutturale. Per la fabbricazione occorrono quote rilevate fisicamente, controlli di tolleranza, materiale, carichi e verifica tecnica competente.
