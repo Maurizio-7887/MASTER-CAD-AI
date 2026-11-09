@@ -1,5 +1,5 @@
 """Protected MASTER CAD AI web application: fixed parametric operations only."""
-import os, json, uuid, secrets, threading
+import os, json, uuid, secrets, threading, tempfile, io
 from pathlib import Path
 from flask import Flask, jsonify, request, redirect, session, render_template_string, Response, send_file, abort
 from mastercad.geometry import build, mesh_data
@@ -7,6 +7,7 @@ from mastercad.interpret import interpret
 from mastercad.image_quotes import inspect_image
 from mastercad.backends import capability, infer_with_gpu
 from mastercad.history import operations
+from mastercad.postgres_store import init_db, save_model, project_list, get_project, get_export, dsn
 
 app=Flask(__name__)
 app.config.update(SECRET_KEY=os.getenv("FLASK_SECRET_KEY") or secrets.token_urlsafe(48),
@@ -41,7 +42,7 @@ def headers(response):
 
 @app.get("/health")
 def health():
-    return jsonify(ok=True,service="master-cad-ai")
+    return jsonify(ok=True,service="master-cad-ai",database="postgresql")
 
 @app.route("/login",methods=["GET","POST"])
 def login():
@@ -61,7 +62,7 @@ def index():
 
 @app.get("/api/status")
 def status():
-    return jsonify(ok=True,mode="online",voice="browser",cad="CadQuery",ai="interprete a regole",backends=capability(),
+    return jsonify(ok=True,mode="online",voice="browser",cad="CadQuery",database="postgresql",ai="interprete a regole",backends=capability(),
                    message="SpeechRecognition supportato solo in alcuni browser; la trascrizione può essere remota.")
 
 @app.post("/api/interpret")
@@ -116,11 +117,14 @@ def build_api():
             obj,solid,spec=build(data.get("spec"))
             mesh=mesh_data(solid)
             token=uuid.uuid4().hex
-            folder=OUTPUT/token
-            folder.mkdir(parents=True,exist_ok=False)
             import cadquery as cq
-            cq.exporters.export(obj,str(folder/"model.step"))
-            cq.exporters.export(obj,str(folder/"model.stl"),tolerance=.05,angularTolerance=.15)
+            with tempfile.TemporaryDirectory(prefix="cad-render-") as tmp:
+                step_path=Path(tmp)/"model.step"
+                stl_path=Path(tmp)/"model.stl"
+                cq.exporters.export(obj,str(step_path))
+                cq.exporters.export(obj,str(stl_path),tolerance=.05,angularTolerance=.15)
+                save_model(token,data.get("name") or "Modello CAD",spec,operations(spec),
+                           step_path.read_bytes(),stl_path.read_bytes())
         return jsonify(id=token,spec=spec,mesh=mesh,history=operations(spec),
                        exports={"step":"/api/export/"+token+"?format=step",
                                 "stl":"/api/export/"+token+"?format=stl"},
@@ -136,10 +140,31 @@ def export(token):
     if len(token)!=32 or any(c not in "0123456789abcdef" for c in token):abort(400)
     fmt=request.args.get("format","step")
     if fmt not in ("step","stl"):abort(400)
-    path=OUTPUT/token/("model."+fmt)
-    if not path.is_file():abort(404)
-    return send_file(path,as_attachment=True,download_name="MASTER_CAD_"+token[:8]+"."+fmt)
+    data=get_export(token,fmt)
+    if data is None:abort(404)
+    return send_file(io.BytesIO(data),as_attachment=True,
+                     download_name="MASTER_CAD_"+token[:8]+"."+fmt,
+                     mimetype="application/step" if fmt=="step" else "model/stl")
+
+@app.get("/api/projects")
+def list_projects():
+    return jsonify(project_list())
+
+
+@app.get("/api/projects/<token>")
+def read_project(token):
+    try:
+        project=get_project(token)
+    except ValueError:
+        abort(400)
+    if project is None:
+        abort(404)
+    return jsonify(project)
+
 
 @app.errorhandler(413)
 def too_big(_):
     return jsonify(error="File troppo grande"),413
+
+# Required PostgreSQL: ensure tables exist before serving CAD requests.
+init_db()
