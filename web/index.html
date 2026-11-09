@@ -33,9 +33,16 @@ button.alt,.download.alt{background:#294764}button:disabled{opacity:.5}button:ho
 <section class="panel"><h2>2 · Controlla le quote</h2><p class="info">Le misure vanno verificate prima di generare il pezzo. Puoi modificarle qui o impartire nuove istruzioni.</p>
 <div class="fields" id="fields"></div>
 <div class="actions"><button id="rebuild">Aggiorna 3D</button><button class="alt" id="reset">Nuovo pezzo</button></div></section>
-<section class="panel"><h2>3 · Foto di riferimento</h2>
-<input type="file" id="photo" accept="image/*"><img id="photo-preview" alt="Foto del pezzo" style="display:none;max-width:100%;max-height:190px;margin-top:12px">
-<p class="info">La foto viene mostrata solo come riferimento sul dispositivo. La ricostruzione automatica da immagini non è ancora disponibile.</p></section>
+<section class="panel"><h2>3 · Foto e disegno quotato</h2>
+<p class="info">Carica una foto PNG/JPG/WEBP (massimo 4 MB). Il riconoscimento OCR gratuito sul server leggerà le misure scritte nel disegno, se presenti.</p>
+<input type="file" id="photo" accept="image/png,image/jpeg,image/webp">
+<img id="photo-preview" alt="Foto del pezzo" style="display:none;max-width:100%;max-height:190px;margin-top:12px">
+<button class="alt" id="read-photo" style="width:100%;margin-top:10px">Leggi le quote dalla foto</button>
+<div id="image-result" class="info" aria-live="polite" style="margin-top:10px"></div>
+<label for="image-shape">Forma del pezzo (sceglila tu)</label>
+<select id="image-shape"><option value="plate">Piastra</option><option value="block">Blocco</option><option value="l_bracket">Staffa a L</option><option value="cylinder">Cilindro</option></select>
+<button id="use-ocr" class="alt" disabled style="width:100%;margin-top:10px">Prepara descrizione dalle quote da verificare</button>
+<p class="alert">Le quote OCR sono <strong>ipotesi non verificate</strong>. Conferma ogni numero, forma, posizione dei fori e spessore prima di costruire o produrre il pezzo. La foto non ricostruisce automaticamente l'albero CAD.</p></section>
 </aside>
 <article><section class="panel"><h2>Modello 3D <small style="color:#9db5ca">· trascina per ruotare · rotella per zoom</small></h2>
 <canvas id="viewport" aria-label="Visualizzatore CAD 3D ruotabile"></canvas>
@@ -95,7 +102,43 @@ el('interpret').onclick=interpret;el('build').onclick=async()=>{if(!spec&&!(awai
 el('rebuild').onclick=build;
 el('reset').onclick=()=>{spec=null;triangles=[];el('fields').replaceChildren();el('instruction').value='';['step','stl'].forEach(k=>el(k).style.display='none');message('Descrivi il nuovo pezzo');draw()};
 document.querySelectorAll('[data-example]').forEach(b=>b.onclick=()=>{spec=null;el('instruction').value=b.dataset.example;interpret()});
-el('photo').onchange=e=>{const f=e.target.files[0];if(f){el('photo-preview').src=URL.createObjectURL(f);el('photo-preview').style.display='block';message('Foto caricata come riferimento: indica le misure a voce o per iscritto')}};
+let ocrCandidates=[];
+el('photo').onchange=e=>{
+ const f=e.target.files[0];ocrCandidates=[];el('use-ocr').disabled=true;el('image-result').textContent='';
+ if(f){el('photo-preview').src=URL.createObjectURL(f);el('photo-preview').style.display='block';message('Foto caricata. Premi Leggi le quote dalla foto.')}
+};
+el('read-photo').onclick=async()=>{
+ const file=el('photo').files[0];
+ if(!file){message('Seleziona una foto o un disegno quotato',true);return}
+ if(file.size>4000000){message('Massimo 4 MB per immagine',true);return}
+ const form=new FormData();form.append('image',file);
+ el('read-photo').disabled=true;message('Leggo le quote scritte nel disegno…');
+ try{
+  const response=await fetch('/api/image/inspect',{method:'POST',headers:{'X-CSRF-Token':CSRF},body:form});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Lettura non riuscita');
+  ocrCandidates=data.dimensions||[];
+  el('image-result').textContent=ocrCandidates.length?
+   'Quote trovate (da verificare): '+ocrCandidates.map(x=>x.field+' '+x.value_mm+' mm').join(' · '):
+   'Nessuna quota riconoscibile. Puoi descrivere le misure a voce.';
+  el('use-ocr').disabled=ocrCandidates.length===0;
+  message(ocrCandidates.length?'OCR completato. Correggi e verifica le quote prima del modello.':'Non ho trovato quote scritte. Specifica le dimensioni reali.',!ocrCandidates.length);
+ }catch(e){message(e.message,true);el('image-result').textContent='';ocrCandidates=[];el('use-ocr').disabled=true}
+ finally{el('read-photo').disabled=false}
+};
+el('use-ocr').onclick=()=>{
+ const kind=el('image-shape').value;
+ const names={plate:'Crea una piastra',block:'Crea un blocco',l_bracket:'Crea una staffa a L',cylinder:'Crea un cilindro'};
+ const terms={length:'lunghezza',width:'larghezza',thickness:'spessore',height:'altezza',diameter:'diametro'};
+ const expected=kind==='cylinder'?['diameter','height']:kind==='l_bracket'?['length','width','thickness','height']:['length','width','thickness'];
+ const map=Object.fromEntries(ocrCandidates.map(c=>[c.field,c.value_mm]));
+ const identified=expected.filter(x=>map[x]!==undefined);
+ const missing=expected.filter(x=>map[x]===undefined);
+ const prompt=names[kind]+' '+identified.map(x=>terms[x]+' '+map[x]+' mm').join(' ');
+ el('instruction').value=prompt;
+ spec=null;
+ message(missing.length?'Mancano: '+missing.map(x=>terms[x]).join(', ')+'. Completa la descrizione con le misure reali; nessuna dimensione verrà inventata.':'Descrizione preparata: verifica ogni misura e premi Comprendi istruzione.',missing.length>0);
+};
 el('talk').onclick=()=>{
  const Rec=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(!Rec){message('Microfono vocale non supportato. Prova Chrome o Edge su HTTPS, oppure scrivi la descrizione.',true);return}
