@@ -56,6 +56,9 @@ button.alt,.download.alt{background:#294764}button:disabled{opacity:.5}button:ho
 <a id="step" class="download" style="display:none" download>↓ Scarica STEP</a>
 <a id="stl" class="download alt" style="display:none" download>↓ Scarica STL</a>
 <p class="alert">⚠️ Un file CAD non certifica la sicurezza: per componenti automobilistici e parti soggette a carichi serve verifica professionale di materiali, quote, tolleranze e resistenza prima della produzione.</p></section>
+<section class="panel"><h2>Albero di costruzione CAD</h2>
+<p class="info">Queste sono le operazioni realmente effettuate per costruire il tuo solido parametrico, non una cronologia ricavata dalla fotografia.</p>
+<ol id="cad-history" style="color:#d1e6f2;padding-left:22px"><li>Nessun modello costruito</li></ol></section>
 <section class="panel"><h2>Esempi da dire al microfono</h2>
 <div class="actions"><button class="alt" data-example="Crea una piastra lunga 120 mm larga 60 mm spessa 5 mm con quattro fori da 8 mm">Piastra forata</button>
 <button class="alt" data-example="Disegna un cilindro diametro 50 mm altezza 30 mm">Cilindro</button>
@@ -101,6 +104,13 @@ async function build(){
   const result=await api('/api/build',{spec:readFields()});fields(result.spec);triangles=result.mesh.triangles||[];
   ['x','y','z'].forEach(key=>el('d'+key).textContent=result.mesh.bounds[key]+' mm');
   ['step','stl'].forEach(key=>{const a=el(key);a.href=result.exports[key];a.style.display='inline-block'});
+  const history=el('cad-history');history.replaceChildren();
+  for(const step of (result.history&&result.history.steps||[])){
+    const li=document.createElement('li');
+    const param=Object.entries(step.parameters_mm||{}).map(([name,value])=>name+': '+value+' mm').join(' · ');
+    li.textContent=step.label+' — '+param;
+    history.appendChild(li);
+  }
   message('Modello generato: ruota e scarica STEP o STL');draw()
  }catch(e){message(e.message,true)}
 }
