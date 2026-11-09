@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MASTER CAD AI — Disegno</title>
+<style>
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:#0b1424;color:#e9f2ff;font:14px/1.45 system-ui,Segoe UI,sans-serif}
+header{background:#101e31;padding:10px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #29445f;gap:10px;flex-wrap:wrap}
+h1{font-size:20px;margin:0}h1 span{color:#67dbfa}h2{font-size:15px;margin:0 0 10px}
+nav a,nav button{color:#cfe6ff;text-decoration:none;margin-left:6px;padding:7px 12px;border:1px solid #36546d;border-radius:8px;background:none;font:inherit;cursor:pointer}
+nav a.att{background:#1886a9;border-color:#1886a9;color:#fff}
+main{display:grid;grid-template-columns:1fr minmax(300px,380px);gap:14px;padding:12px;max-width:1800px;margin:0 auto}
+.panel{background:#13243b;border:1px solid #2b4766;border-radius:12px;padding:14px;margin-bottom:12px}
+.info{color:#a9c3d9;font-size:12.5px}
+.barra{display:flex;flex-wrap:wrap;gap:4px 10px;background:#13243b;border:1px solid #2b4766;border-radius:10px 10px 0 0;padding:6px 8px}
+.gruppo{display:flex;flex-wrap:wrap;gap:3px;align-items:center}.gruppo>span{font-size:10.5px;color:#87a6c2;text-transform:uppercase;letter-spacing:.06em;margin-right:3px}
+.barra button{background:#1d3653;border:1px solid #33557a;color:#e9f2ff;border-radius:6px;padding:5px 8px;font:12.5px system-ui;cursor:pointer}
+.barra button:hover{background:#26507a}.barra button.d3{background:#1b6f52;border-color:#2c9a73}
+#tavola{display:block;width:100%;height:min(66vh,760px);min-height:340px;background:#0d1b2a;border-left:1px solid #2b4766;border-right:1px solid #2b4766;cursor:none;touch-action:none}
+.riga{background:#0f1e31;border:1px solid #2b4766;border-top:0;border-radius:0 0 10px 10px;padding:6px 8px}
+#storia{height:110px;overflow:auto;font:12.5px ui-monospace,Consolas,monospace;color:#c8d9ea;white-space:pre-wrap}#storia .err{color:#ff9b9b}
+.cmdline{display:flex;align-items:center;gap:8px;border-top:1px solid #23405c;margin-top:4px;padding-top:6px}
+#cmd-prompt{font:13px ui-monospace,Consolas,monospace;color:#ffd34d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+#cmd{flex:1;background:#081322;color:#fff;border:1px solid #3c5c7c;border-radius:6px;padding:8px;font:14px ui-monospace,Consolas,monospace;text-transform:uppercase}
+.stato{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;font:12px ui-monospace,Consolas,monospace;color:#9fb8cf}
+.stato button{background:#14273e;border:1px solid #33557a;color:#7f98ae;border-radius:5px;padding:3px 8px;font:inherit;cursor:pointer}.stato button.on{background:#1886a9;color:#fff;border-color:#1886a9}
+#coord{min-width:190px}
+#vista3d{width:100%;height:280px;background:#122a40;border-radius:10px;border:1px solid #345574;touch-action:none;cursor:grab}
+label{display:block;font-size:12.5px;color:#bcd0e2;margin:8px 0 4px}
+input,select{width:100%;padding:8px;background:#0b1a2d;color:#fff;border:1px solid #405d78;border-radius:7px;font:inherit}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.actions{display:flex;gap:8px;margin-top:10px}.actions button,.dl{flex:1;padding:10px;border:0;border-radius:8px;background:#1886a9;color:#fff;font:inherit;font-weight:650;cursor:pointer;text-align:center;text-decoration:none}
+#foto-anteprima{width:100%;margin-top:8px;border-radius:8px;border:1px solid #345574}
+.avvisi{margin:8px 0 0;padding-left:18px;color:#efcb95;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12px}td{border-top:1px solid #23405c;padding:4px;vertical-align:top}td:nth-child(2){color:#8fb3d1;font-family:ui-monospace,Consolas,monospace}
+details summary{cursor:pointer;font-weight:650}
+.coord-help{font:12px ui-monospace,Consolas,monospace;color:#cfe6ff;background:#0b1a2d;border-radius:8px;padding:8px;margin:8px 0}
+@media(max-width:980px){main{grid-template-columns:1fr}#tavola{height:52vh}}
+</style>
+<script src="{{ url_for('disegno.static', filename='geometria2d.js') }}"></script>
+<script src="{{ url_for('disegno.static', filename='dxf.js') }}"></script>
+<script src="{{ url_for('disegno.static', filename='comandi.js') }}"></script>
+<script src="{{ url_for('disegno.static', filename='vista3d.js') }}"></script>
+</head>
+<body data-csrf="{{ csrf }}">
+<header>
+  <h1>MASTER <span>CAD AI</span> · Disegno</h1>
+  <nav><a href="/">🎙️ Progetta parlando</a><a class="att" href="/disegno">📐 Disegno come AutoCAD</a><button type="button" id="esci">Esci</button></nav>
+</header>
+<main>
+  <div>
+    <div class="barra">
+      <div class="gruppo"><span>Disegna</span>
+        <button data-cmd="LINEA" title="L">Linea</button><button data-cmd="PLINEA" title="PL">Polilinea</button><button data-cmd="CERCHIO" title="C">Cerchio</button>
+        <button data-cmd="ARCO" title="A">Arco</button><button data-cmd="RETTANGOLO" title="REC">Rettangolo</button><button data-cmd="POLIGONO" title="POL">Poligono</button></div>
+      <div class="gruppo"><span>Modifica</span>
+        <button data-cmd="SPOSTA" title="M">Sposta</button><button data-cmd="COPIA" title="CO">Copia</button><button data-cmd="RUOTA" title="RO">Ruota</button>
+        <button data-cmd="SPECCHIO" title="MI">Specchio</button><button data-cmd="SCALA" title="SC">Scala</button><button data-cmd="OFFSET" title="O">Offset</button>
+        <button data-cmd="RACCORDO" title="F">Raccordo</button><button data-cmd="CIMA" title="CHA">Cima</button><button data-cmd="TAGLIA" title="TR">Taglia</button>
+        <button data-cmd="ESTENDI" title="EX">Estendi</button><button data-cmd="ESPLODI" title="X">Esplodi</button><button data-cmd="CANCELLA" title="E">Cancella</button></div>
+      <div class="gruppo"><span>Misura</span><button data-cmd="DIST" title="DI">Dist</button><button data-cmd="QUOTA" title="DLI">Quota</button><button data-cmd="LISTA" title="LI">Lista</button><button data-cmd="TESTO" title="T">Testo</button></div>
+      <div class="gruppo"><span>3D</span><button class="d3" data-cmd="ESTRUDI" title="EXT">Estrudi</button><button class="d3" data-cmd="RIVOLUZIONE" title="REV">Rivoluzione</button></div>
+      <div class="gruppo"><span>File</span><button data-cmd="DXFIN" title="Apri un DXF di AutoCAD">Apri DXF</button><button data-cmd="DXFOUT" title="Scarica DXF">Salva DXF</button>
+        <button data-cmd="ANNULLA" title="U · Ctrl+Z">↶ Annulla</button><button data-cmd="RIPRISTINA">↷</button><button data-cmd="ZOOM" title="Z">Zoom</button><button data-cmd="NUOVO">Nuovo</button></div>
+    </div>
+    <canvas id="tavola" aria-label="Tavola di disegno 2D"></canvas>
+    <div class="riga">
+      <div id="storia" aria-live="polite"></div>
+      <div class="cmdline"><span id="cmd-prompt">Comando:</span><input id="cmd" autocomplete="off" spellcheck="false" aria-label="Riga di comando"></div>
+      <div class="stato"><span id="coord">0.00, 0.00</span>
+        <button type="button" id="b-orto" title="F8">ORTO</button><button type="button" id="b-snap" title="F9">SNAP</button><button type="button" id="b-osnap" title="F3">OSNAP</button>
+        <span id="n-oggetti"></span><span style="margin-left:auto">Rotella: zoom · Tasto centrale/destro: pan · Destro: INVIO · Esc: annulla</span></div>
+    </div>
+    <input type="file" id="file-dxf" hidden>
+  </div>
+  <aside>
+    {% include "reverse/_foto.html" %}
+    <section class="panel">
+      <h2>🧊 Solido 3D</h2>
+      <label>Nome del pezzo<input id="nome-pezzo" placeholder="es. Piastra di fissaggio"></label>
+      <canvas id="vista3d" aria-label="Vista 3D del solido"></canvas>
+      <p id="info3d" class="info"></p>
+      <div class="actions" id="download3d" hidden><a class="dl" id="dl-step" href="#">Scarica STEP</a><a class="dl" id="dl-stl" href="#">Scarica STL</a></div>
+      <p class="info">Bozza CAD: verifica quote, tolleranze, materiale e carichi prima di produrre.</p>
+    </section>
+    <section class="panel">
+      <details open><summary>⌨️ Come si scrive, come in AutoCAD</summary>
+        <div class="coord-help">100,50 &nbsp;→ punto assoluto<br>@30,0 &nbsp;→ 30 mm a destra dell’ultimo punto<br>@50&lt;45 → 50 mm a 45°<br>40 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ 40 mm verso il cursore (con ORTO: dritto)<br>INVIO o SPAZIO a vuoto → ripete l’ultimo comando<br>ESC → annulla · CANC → cancella la selezione</div>
+        <p class="info">Il 3D: disegna il contorno <b>chiuso</b> del pezzo; i contorni chiusi dentro diventano fori. ESTRUDI dà lo spessore; RIVOLUZIONE fa girare la mezza sezione attorno all’asse X (pezzi torniti).</p>
+      </details>
+      <details><summary>📋 Tutti i comandi</summary><table id="elenco-comandi"></table></details>
+    </section>
+  </aside>
+</main>
+<script src="{{ url_for('disegno.static', filename='disegno.js') }}"></script>
+<script src="{{ url_for('reverse.static', filename='foto.js') }}"></script>
+<script>
+document.getElementById('esci').onclick=async function(){await fetch('/logout',{method:'POST',headers:{'X-CSRF-Token':document.body.getAttribute('data-csrf')}});location.href='/login'};
+</script>
+</body></html>

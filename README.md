@@ -2,6 +2,23 @@
 
 Prototipo **CAD 3D online** utilizzabile da browser, senza licenze CAD a pagamento. Il modello viene elaborato sul server mediante CadQuery/OpenCascade; puoi descrivere forme e quote in italiano, usare il microfono quando il browser supporta la trascrizione, ruotare il modello ed esportare STEP/STL.
 
+## Novità: Disegno come AutoCAD e reverse engineering da foto
+
+Pagina **/disegno** (pulsante «📐 Disegno come AutoCAD» in alto):
+- **Riga di comando come AutoCAD**, con nomi italiani, inglesi e alias: LINEA (L), PLINEA (PL), CERCHIO (C), ARCO (A), RETTANGOLO (REC), POLIGONO (POL), SPOSTA (M), COPIA (CO), RUOTA (RO), SPECCHIO (MI), SCALA (SC), OFFSET (O), RACCORDO (F), CIMA (CHA), TAGLIA (TR), ESTENDI (EX), ESPLODI (X), CANCELLA (E), ANNULLA (U), RIPRISTINA, ZOOM (Z), DIST (DI), ID, LISTA (LI), QUOTA (DLI), TESTO, ORTO (F8), SNAP (F9), OSNAP (F3), DXFIN/DXFOUT, ESTRUDI (EXT), RIVOLUZIONE (REV), AIUTO (F1).
+- Coordinate: `100,50` assolute · `@30,0` relative · `@50<45` polari · un numero = distanza diretta verso il cursore. INVIO/SPAZIO ripete l'ultimo comando, ESC annulla, tasto destro = INVIO.
+- Snap ad oggetto: estremo, medio, centro, quadrante, intersezione. Selezione a finestra (sinistra→destra) e intersecante (destra→sinistra).
+- **DXF**: apre i DXF di AutoCAD (LINE, CIRCLE, ARC, LWPOLYLINE, POLYLINE) e salva in DXF R12.
+- **3D**: ESTRUDI trasforma i contorni chiusi in solido (i contorni interni diventano fori); RIVOLUZIONE fa ruotare la mezza sezione (pezzi torniti). STEP/STL salvati in PostgreSQL.
+
+**Reverse engineering da foto** (pannello a destra della tavola):
+- Vista **dall'alto** (piastre, flange, staffe, sagome) → contorno esterno + fori (riconosciuti come cerchi) → ESTRUDI.
+- Vista **di lato** (perni, alberi, boccole) → mezza sezione → RIVOLUZIONE.
+- Scala: **foglio A4** sotto il pezzo (corregge anche la prospettiva) oppure **una misura vera** del pezzo.
+- Elaborazione con OpenCV sul server, nessun servizio a pagamento. Una foto non mostra spessore, parti nascoste, gole interne o filetti: il disegno è una bozza da controllare (DIST, LISTA) e correggere con i comandi.
+
+Codice: `mastercad/disegno/` (blueprint, pagina e motore comandi JS), `mastercad/reverse/` (blueprint e analisi della foto), `mastercad/profili.py` (dal 2D al solido CadQuery). Test: `tests/test_disegno_reverse.py`, `node tests/js/comandi.test.js`.
+
 ## Funzioni disponibili (MVP)
 - Piastra, blocco, cilindro e staffa a L parametrici, con controlli dimensionali
 - Fori su piastre e blocchi, quote in mm, modifiche da testo o campi

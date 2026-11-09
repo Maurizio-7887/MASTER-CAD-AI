@@ -1,0 +1,26 @@
+{# Reverse engineering da foto: pannello inserito nella pagina Disegno #}
+<section class="panel" id="foto">
+  <h2>📷 Reverse engineering da foto</h2>
+  <p class="info">Fotografa il pezzo <b>perpendicolare</b>, su uno sfondo uniforme che contrasti. Il programma ricava il contorno in millimetri e lo apre nella tavola: lì lo correggi con i comandi e premi ESTRUDI o RIVOLUZIONE.</p>
+  <label>Foto del pezzo<input type="file" id="foto-file" accept="image/png,image/jpeg,image/webp"></label>
+  <label>Come è fotografato
+    <select id="foto-vista">
+      <option value="alto">Dall’alto · pezzo piatto (piastra, flangia, staffa, sagoma) → ESTRUDI</option>
+      <option value="lato">Di lato · pezzo tornito (perno, albero, boccola) → RIVOLUZIONE</option>
+    </select></label>
+  <label>Riferimento per la scala
+    <select id="foto-rif">
+      <option value="a4">Foglio A4 bianco sotto il pezzo (più preciso: corregge anche la prospettiva)</option>
+      <option value="misura">Una misura vera del pezzo</option>
+    </select></label>
+  <div id="foto-misura-box" hidden>
+    <div class="fields">
+      <label>Misura (mm)<input id="foto-misura" type="number" min="0.5" step="0.1" placeholder="es. 120"></label>
+      <label>Di che cosa<select id="foto-misura-di"><option value="larghezza">larghezza totale (orizzontale nella foto)</option><option value="altezza">altezza totale (verticale nella foto)</option></select></label>
+    </div>
+  </div>
+  <div class="actions"><button type="button" id="foto-vai">Ricava il disegno dalla foto</button></div>
+  <p id="foto-stato" class="info"></p>
+  <img id="foto-anteprima" alt="Contorno riconosciuto sulla foto" hidden>
+  <ul id="foto-avvisi" class="avvisi"></ul>
+</section>
