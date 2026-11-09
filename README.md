@@ -13,13 +13,13 @@ Prototipo **CAD 3D online** utilizzabile da browser, senza licenze CAD a pagamen
 ## Deploy Railway
 1. Railway → New Project → Deploy from GitHub Repo → `Maurizio-7887/MASTER-CAD-AI`.
 2. Il progetto include `Dockerfile` e `railway.json`, per il motore CAD su Linux.
-3. In **Variables**, creare due variabili **separate**:
+3. Aggiungere PostgreSQL al progetto Railway e configurare sul servizio applicativo `DATABASE_URL` usando la reference Railway `${{Postgres.DATABASE_URL}}`. Il nome del servizio PostgreSQL potrebbe essere diverso da `Postgres` e in tal caso va usato quello reale. In **Variables**, configurare inoltre:
    - `MASTER_CAD_PASSWORD` — password privata lunga per il login.
    - `FLASK_SECRET_KEY` — valore casuale diverso, almeno 32 caratteri, per firmare la sessione.
 4. Railway → Networking → Generate Domain; apri il sito HTTPS, inserisci la password e prova il primo progetto.
 5. Health check: `/health`.
 
-**Attenzione:** i file STEP/STL sono temporanei (filesystem Railway effimero): scaricali subito. Lo storage persistente sarà un'evoluzione. Non serve PostgreSQL per questa demo iniziale.
+**Persistenza PostgreSQL obbligatoria:** il codice legge `DATABASE_URL` da Railway, crea automaticamente la tabella `cad_projects` e salva nel database progetti, parametri, cronologia e file STEP/STL. Nessun utilizzo o fallback SQLite. Se la variabile manca o non contiene un URL PostgreSQL, l'app non parte, anziché perdere i dati.
 
 ## Costi e limiti
 Software CAD open source, ma **Railway può avere costi di hosting**. Il browser può usare un servizio remoto di trascrizione. Non servono abbonamenti CAD.
@@ -67,3 +67,7 @@ Img2CAD è un progetto accademico con licenza MIT per il codice: i checkpoint pu
 ### Limiti per produzione automobilistica
 
 La geometria CAD prodotta è una **bozza da verificare**. Nessun componente è certificato per auto, sicurezza o uso strutturale. Per la fabbricazione occorrono quote rilevate fisicamente, controlli di tolleranza, materiale, carichi e verifica tecnica competente.
+
+## Configurazione database PostgreSQL (obbligatoria)
+
+Su Railway, nel servizio MASTER-CAD-AI, configurare `DATABASE_URL` come **reference** al database PostgreSQL del progetto, ad esempio `${{Postgres.DATABASE_URL}}`. Non incollare una password reale nel repository. È necessario utilizzare il nome effettivo del servizio PostgreSQL indicato in Railway. L'app usa `psycopg2` e crea `cad_projects` alla partenza. L'endpoint di elenco `/api/projects` e il download `/api/export/<id>?format=step|stl` leggono dal database e non da cartelle locali. Nessuna dipendenza SQLite.
