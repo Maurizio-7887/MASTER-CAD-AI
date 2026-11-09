@@ -71,3 +71,11 @@ La geometria CAD prodotta è una **bozza da verificare**. Nessun componente è c
 ## Configurazione database PostgreSQL (obbligatoria)
 
 Su Railway, nel servizio MASTER-CAD-AI, configurare `DATABASE_URL` come **reference** al database PostgreSQL del progetto, ad esempio `${{Postgres.DATABASE_URL}}`. Non incollare una password reale nel repository. È necessario utilizzare il nome effettivo del servizio PostgreSQL indicato in Railway. L'app usa `psycopg2` e crea `cad_projects` alla partenza. L'endpoint di elenco `/api/projects` e il download `/api/export/<id>?format=step|stl` leggono dal database e non da cartelle locali. Nessuna dipendenza SQLite.
+
+## Esempio industriale avanzato — flangia forata
+
+Dal pannello **Esempi da dire al microfono**, scegliere **Flangia industriale** oppure pronunciare: 
+
+> Crea una flangia diametro esterno 100 mm spessore 12 mm foro centrale 30 mm interasse fori 70 mm quattro fori fissaggio 8 mm.
+
+Il motore genera un unico solido B-Rep con schizzo circolare, estrusione, foro centrale passante e quattro fori su circonferenza di passo. Le dimensioni sono parametriche e il risultato è esportabile in STEP/STL, salvato in PostgreSQL. Modelli e quote sono dimostrativi, da verificare prima di qualsiasi fabbricazione. Non è una flangia certificata o pronta per un impianto/veicolo.
