@@ -7,7 +7,7 @@ def num(s):return float(s.replace(",","."))
 
 def find_value(text,words):
     for word in words:
-        match=re.search(r"\b"+re.escape(word)+r"\b\s*(?:di|da|:|=)?\s*"+N+r"\s*(?:mm|millimetri)?",text)
+        match=re.search(r"\b"+re.escape(word)+r"\b\s*(?:di|da|a|:|=)?\s*"+N+r"\s*(?:mm|millimetri)?",text)
         if match:return num(match.group(1))
     return None
 
