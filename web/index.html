@@ -38,6 +38,12 @@ button.alt,.download.alt{background:#294764}button:disabled{opacity:.5}button:ho
 <input type="file" id="photo" accept="image/png,image/jpeg,image/webp">
 <img id="photo-preview" alt="Foto del pezzo" style="display:none;max-width:100%;max-height:190px;margin-top:12px">
 <button class="alt" id="read-photo" style="width:100%;margin-top:10px">Leggi le quote dalla foto</button>
+<div class="panel" style="margin-top:12px;border:1px dashed #4e718e;background:#11263d">
+  <h2 style="margin-bottom:7px">Motore Image-to-CAD NVIDIA</h2>
+  <p class="info" id="gpu-status">Verifico se il motore GPU esterno è disponibile…</p>
+  <button class="alt" id="gpu-infer" disabled style="width:100%">Ricostruisci con GPU (non ancora collegata)</button>
+  <p class="info">Per ora usa «Leggi le quote dalla foto». Quando collegherai una NVIDIA con i modelli installati, il comando GPU sarà disponibile senza rifare il sito.</p>
+</div>
 <div id="image-result" class="info" aria-live="polite" style="margin-top:10px"></div>
 <label for="image-shape">Forma del pezzo (sceglila tu)</label>
 <select id="image-shape"><option value="plate">Piastra</option><option value="block">Blocco</option><option value="l_bracket">Staffa a L</option><option value="cylinder">Cilindro</option></select>
@@ -126,6 +132,22 @@ el('read-photo').onclick=async()=>{
  }catch(e){message(e.message,true);el('image-result').textContent='';ocrCandidates=[];el('use-ocr').disabled=true}
  finally{el('read-photo').disabled=false}
 };
+el('gpu-infer').onclick=async()=>{
+ const file=el('photo').files[0];
+ if(!file){message('Carica prima una foto',true);return}
+ const form=new FormData();form.append('image',file);form.append('category','mechanical_part');
+ el('gpu-infer').disabled=true;message('Richiedo una proposta al motore Image-to-CAD…');
+ try{
+  const response=await fetch('/api/image/infer-gpu',{method:'POST',headers:{'X-CSRF-Token':CSRF},body:form});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'GPU non disponibile');
+  if(data.spec){
+   fields(data.spec);
+   message('Proposta ricevuta: verifica tutte le quote prima di costruire il modello.');
+  }
+ }catch(e){message(e.message+' Puoi usare la lettura OCR online.',true)}
+ finally{el('gpu-infer').disabled=false}
+};
 el('use-ocr').onclick=()=>{
  const kind=el('image-shape').value;
  const names={plate:'Crea una piastra',block:'Crea un blocco',l_bracket:'Crea una staffa a L',cylinder:'Crea un cilindro'};
@@ -172,6 +194,18 @@ canvas.onpointermove=e=>{if(!drag)return;yaw+=(e.clientX-drag[0])*.012;pitch=Mat
 canvas.onpointerup=()=>{drag=null};
 canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.2,Math.min(5,zoom*Math.exp(-e.deltaY*.001)));draw()},{passive:false});
 new ResizeObserver(resize).observe(canvas);
-fetch('/api/status').then(r=>r.json()).then(s=>{if(s.ok)el('mode').textContent='● CAD 3D online · microfono browser'}).catch(()=>{});
+fetch('/api/status').then(r=>r.json()).then(s=>{
+ if(!s.ok)return;
+ el('mode').textContent='● CAD 3D online · microfono browser';
+ const gpu=s.backends&&s.backends.gpu;
+ if(!gpu||!gpu.configured){
+  el('gpu-status').textContent='GPU non collegata — motore previsto e bypassato. Modalità OCR + CAD online attiva.';
+  el('gpu-infer').disabled=true;
+ }else{
+  el('gpu-status').textContent='Worker GPU configurato. La disponibilità effettiva e i checkpoint vengono verificati all\'invio.';
+  el('gpu-infer').disabled=false;
+  el('gpu-infer').textContent='Prova ricostruzione Image-to-CAD GPU';
+ }
+}).catch(()=>{el('gpu-status').textContent='Stato GPU non verificabile';});
 resize();
 </script></body></html>
