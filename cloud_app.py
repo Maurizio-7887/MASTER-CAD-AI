@@ -1,5 +1,6 @@
 """Protected MASTER CAD AI web application: fixed parametric operations only."""
 import os, json, uuid, secrets, threading, tempfile, io
+from datetime import timedelta
 from pathlib import Path
 from flask import Flask, jsonify, request, redirect, session, render_template_string, Response, send_file, abort
 from mastercad.geometry import build, mesh_data
@@ -13,7 +14,8 @@ app=Flask(__name__)
 app.config.update(SECRET_KEY=os.getenv("FLASK_SECRET_KEY") or secrets.token_urlsafe(48),
                   SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax",
                   SESSION_COOKIE_SECURE=os.getenv("COOKIE_SECURE","1")!="0",
-                  MAX_CONTENT_LENGTH=5_000_000)
+                  MAX_CONTENT_LENGTH=5_000_000,
+                  PERMANENT_SESSION_LIFETIME=timedelta(hours=8))
 OUTPUT=Path(os.getenv("MASTER_CAD_OUTPUT","/tmp/mastercad-projects"))
 _LOCK=threading.Lock()
 LOGIN="""<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MASTER CAD AI · Accesso</title>
@@ -46,14 +48,21 @@ def health():
 
 @app.route("/login",methods=["GET","POST"])
 def login():
-    if request.method=="GET": return render_template_string(LOGIN,error=None)
+    if request.method=="GET":
+        return render_template_string(LOGIN,error="Sessione scaduta: accedi nuovamente" if request.args.get("expired")=="1" else None)
     password=os.getenv("MASTER_CAD_PASSWORD","")
     if password and secrets.compare_digest(request.form.get("password",""),password):
         session.clear()
         session["ok"]=True
+        session.permanent=True
         session["csrf"]=secrets.token_urlsafe(32)
         return redirect("/")
     return render_template_string(LOGIN,error="Password errata o non configurata"),401
+
+@app.post("/logout")
+def logout():
+    session.clear()
+    return jsonify(ok=True,redirect="/login")
 
 @app.get("/")
 def index():
