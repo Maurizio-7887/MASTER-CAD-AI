@@ -7,7 +7,8 @@
     var f = $('foto-file').files[0];
     if (!f) { $('foto-stato').textContent = 'Scegli prima una foto.'; return; }
     var fd = new FormData();
-    fd.append('image', f); fd.append('vista', $('foto-vista').value); fd.append('riferimento', $('foto-rif').value);
+    var vista = $('foto-vista').value;
+    fd.append('image', f); fd.append('vista', vista === 'fronte' ? 'alto' : vista); fd.append('riferimento', $('foto-rif').value);
     fd.append('misura', $('foto-misura').value); fd.append('misura_di', $('foto-misura-di').value);
     $('foto-vai').disabled = true; $('foto-stato').textContent = 'Analizzo la foto…';
     try {
@@ -19,6 +20,11 @@
       var i = j.info, riass = j.vista === 'alto' ? ('Contorno ' + i.larghezza_mm + ' × ' + i.altezza_mm + ' mm, ' + i.fori + ' fori') : ('Profilo tornito lungo ' + i.lunghezza_mm + ' mm, diametro massimo ' + i.diametro_max_mm + ' mm');
       $('foto-stato').textContent = '✓ ' + riass + '. Aperto nella tavola: controlla con DIST, correggi, poi ' + j.comando_3d + '.';
       $('foto-avvisi').innerHTML = ''; j.avvisi.forEach(function (a) { var li = document.createElement('li'); li.textContent = a; $('foto-avvisi').appendChild(li); });
+      if (vista === 'fronte' && window.MCADP) {      // la vista di fronte non va sulla tavola: entra direttamente nel progetto
+        $('foto-stato').textContent = '✓ Vista di fronte ' + i.larghezza_mm + ' × ' + i.altezza_mm + ' mm: unita alla vista dall’alto nel progetto.';
+        await window.MCADP.impostaBase('fronte', {entita: j.entita});
+        return;
+      }
       window.dispatchEvent(new CustomEvent('mcad:entita', {detail: {entita: j.entita, sostituisci: false,
         messaggio: 'Dalla foto: ' + riass + '. Controlla le quote (DIST, LISTA), correggi con i comandi, poi ' + j.comando_3d + (j.vista === 'lato' ? ' attorno all’asse X (predefinito).' : ' con lo spessore del pezzo.')}}));
     } catch (e) { $('foto-stato').textContent = '⛔ ' + e.message; }

@@ -19,6 +19,17 @@ Pagina **/disegno** (pulsante «📐 Disegno come AutoCAD» in alto):
 
 Codice: `mastercad/disegno/` (blueprint, pagina e motore comandi JS), `mastercad/reverse/` (blueprint e analisi della foto), `mastercad/profili.py` (dal 2D al solido CadQuery). Test: `tests/test_disegno_reverse.py`, `node tests/js/comandi.test.js`.
 
+## Novità: progetto complesso con le indicazioni del tecnico
+
+Dalla foto (o dal disegno) al **pezzo completo**, come in un CAD parametrico:
+
+- **Albero delle lavorazioni**: forma di base + fori (Ø o filettati M2–M24, passanti o ciechi con punta a 118°, lamati per viti ISO 4762, svasati), serie polari e rettangolari di fori, tasche (anche con angoli raggiati), asole, rialzi/borchie/mozzi, raccordi e smussi degli spigoli, guscio. Ogni lavorazione si può sospendere o togliere: il pezzo si ricostruisce da capo. Quelle impossibili (fuori dal pezzo, raggio troppo grande) vengono **saltate con il motivo**, senza perdere il resto. Fori e tasche partono dalla faccia che incontrano davvero (es. sopra un rialzo).
+- **Indicazioni del tecnico in italiano**, anche di massima: «diametro esterno 100; spessore 15; foro centrale Ø30 H7 con lamatura Ø40 profonda 5; 4 fori M8 lamati su interasse 70; foro M6 filettato profondo 12 in 0,40; tasca 40x20 profonda 6 in 30,50 raggio 4; asola 30x8 verticale in -40,0; rialzo Ø60 alto 5; raccordo R1 spigoli superiori; smusso 0.5 bordi inferiori; guscio spessore 3 aperto sotto». Le misure nominali **correggono quelle della foto** (scala, foro centrale portato in asse, corona di fori sostituita dalla serie esatta con l'orientamento della foto). Interprete a regole, deterministico: quello che non capisce lo dice, non lo inventa. Coordinate come nella tavola (comando ID), oppure «… dal centro».
+- **Due viste**: foto (o disegno) dall'alto + foto di fronte → intersezione delle due estrusioni, per staffe a L, pezzi a gradini, spallamenti.
+- **Comandi 3D dalla riga di comando**: FORO/HOLE (anche serie Polare/Rettangolare), TASCA/POCKET, ASOLA/SLOT, RIALZO/BOSS, RACCORDASPIGOLI/FILLETEDGE, SMUSSASPIGOLI/CHAMFEREDGE, GUSCIO/SHELL; in 2D SERIEPOLARE/ARRAYPOLAR e SERIERETT/ARRAYRECT.
+
+Codice: `mastercad/progetto/` (`lavorazioni.py` motore dell'albero, `direttive.py` interprete delle indicazioni, blueprint e pannello). Test: `tests/test_progetto.py`.
+
 ## Funzioni disponibili (MVP)
 - Piastra, blocco, cilindro e staffa a L parametrici, con controlli dimensionali
 - Fori su piastre e blocchi, quote in mm, modifiche da testo o campi

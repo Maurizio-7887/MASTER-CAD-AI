@@ -190,6 +190,14 @@ def regioni(entita):
     return risultato, aperti
 
 
+def estensione_entita(entita):
+    """Ingombro (xmin, ymin, xmax, ymax) dei contorni chiusi."""
+    regs, _ = regioni(entita)
+    xs = [p[0] for r in regs for p in r["esterno"]["pts"]]
+    ys = [p[1] for r in regs for p in r["esterno"]["pts"]]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
 def _facce(entita):
     regs, aperti = regioni(entita)
     facce = []

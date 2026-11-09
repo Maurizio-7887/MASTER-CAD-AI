@@ -12,7 +12,7 @@ function sessione() {
     chiedi: async () => { const v = coda.shift(); if (v === undefined) throw new Error('script finito'); return v; },
     seleziona: async () => coda.shift(),
     scrivi: t => log.push(t), zoomEstensioni() {}, aggiorna() {},
-    solido: async (op, dati) => solidi.push([op, dati]), scarica: (n, t) => log.push('FILE ' + n + ' ' + t.length), apriFile: async () => coda.shift()
+    solido: async (op, dati) => solidi.push([op, dati]), lavorazione: async l => solidi.push(['lav', l]), scarica: (n, t) => log.push('FILE ' + n + ' ' + t.length), apriFile: async () => coda.shift()
   };
   const cad = CAD.crea(io);
   const t = x => ({testo: x}), clic = (x, y, extra) => Object.assign({clic: [x, y], tolleranza: 1}, extra || {});
@@ -96,6 +96,32 @@ function sessione() {
   k.coda.push(k.t(''), k.t('')); await k.cad.esegui('REV');
   assert.deepEqual(k.solidi[0][1].asse, [[0, 0], [1, 0]]); assert.equal(k.solidi[0][1].angolo, 360);
 
+  // lavorazioni 3D: FORO filettato, serie polare lamata, TASCA, ASOLA, RACCORDASPIGOLI, GUSCIO
+  k = sessione();
+  k.coda.push(k.t('30,20'), k.t('M8'), k.t('12'), k.t('')); await k.cad.esegui('FORO');
+  assert.deepEqual(k.solidi[0], ['lav', {tipo: 'foro', x: 30, y: 20, filetto: 'M8', prof: 12}]);
+  k.coda.push(k.t('P'), k.t('0,0'), k.t('70'), k.t('6'), k.t('15'), k.t('9'), k.t('P'), k.t('L'), k.t('15'), k.t('8.6')); await k.cad.esegui('HOLE');
+  assert.deepEqual(k.solidi[1][1], {tipo: 'serie_polare', centro: [0, 0], diametro: 70, n: 6, angolo0: 15, foro: {d: 9, lamatura: {d: 15, prof: 8.6}}});
+  k.coda.push(k.t('10,10'), k.t(''), k.t('40'), k.t('20'), k.t(''), k.t('3'), k.t('6')); await k.cad.esegui('TASCA');
+  assert.deepEqual(k.solidi[2][1], {forma: 'rett', centro: [10, 10], l: 40, w: 20, angolo: 0, raggio_angoli: 3, tipo: 'tasca', prof: 6});
+  k.coda.push(k.t('0,0'), k.t('30,0'), k.t('8'), k.t('')); await k.cad.esegui('SLOT');
+  assert.deepEqual(k.solidi[3][1], {tipo: 'asola', centro: [15, 0], lunghezza: 38, larghezza: 8, angolo: 0, prof: null});
+  k.coda.push(k.t('2'), k.t('S')); await k.cad.esegui('FILLETEDGE');
+  assert.deepEqual(k.solidi[4][1], {tipo: 'raccordo', r: 2, spigoli: 'superiori'});
+  k.coda.push(k.t('2'), k.t('SOTTO')); await k.cad.esegui('SHELL');
+  assert.deepEqual(k.solidi[5][1], {tipo: 'guscio', spessore: 2, aperta: 'sotto'});
+  assert.equal(k.s.entita.length, 0, 'le lavorazioni 3D non toccano la tavola');
+
+  // SERIEPOLARE e SERIERETT 2D
+  k = sessione();
+  k.coda.push(k.t('35,0'), k.t('4')); await k.cad.esegui('C');
+  k.coda.push([k.s.entita[0].id], k.t('0,0'), k.t('4'), k.t('')); await k.cad.esegui('ARRAYPOLAR');
+  assert.equal(k.s.entita.length, 4);
+  assert.ok(k.s.entita.some(e => Math.abs(e.c[0]) < 1e-6 && Math.abs(e.c[1] - 35) < 1e-6), 'copia a 90°');
+  k = sessione();
+  k.coda.push(k.t('0,0'), k.t('2')); await k.cad.esegui('C');
+  k.coda.push([k.s.entita[0].id], k.t('3'), k.t('2'), k.t('10'), k.t('15')); await k.cad.esegui('AR');
+  assert.equal(k.s.entita.length, 6); assert.ok(k.s.entita.some(e => e.c[0] === 20 && e.c[1] === 15));
   // DXF: scrittura e rilettura
   k = sessione();
   k.coda.push(k.t('0,0'), k.t('@120,80')); await k.cad.esegui('REC');
@@ -109,5 +135,5 @@ function sessione() {
   assert.equal(k.s.entita.length, 0); assert.ok(k.log.includes('*Annulla*'));
   // comando sconosciuto
   await k.cad.esegui('PIPPO'); assert.ok(k.log.some(l => /sconosciuto/.test(l)));
-  console.log('OK: comandi AutoCAD (LINEA, PLINEA, CERCHIO, ARCO, RETTANGOLO, POLIGONO, SPOSTA, COPIA, RUOTA, SCALA, SPECCHIO, OFFSET, RACCORDO, TAGLIA, ESPLODI, DIST, ANNULLA, ESTRUDI, RIVOLUZIONE, DXF)');
+  console.log('OK: comandi AutoCAD (LINEA, PLINEA, CERCHIO, ARCO, RETTANGOLO, POLIGONO, SPOSTA, COPIA, RUOTA, SCALA, SPECCHIO, OFFSET, RACCORDO, TAGLIA, ESPLODI, DIST, ANNULLA, ESTRUDI, RIVOLUZIONE, DXF, FORO, TASCA, ASOLA, RACCORDASPIGOLI, GUSCIO, SERIEPOLARE, SERIERETT)');
 })().catch(e => { console.error(e); process.exit(1); });
