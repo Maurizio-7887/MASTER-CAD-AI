@@ -69,7 +69,8 @@ button.alt,.download.alt{background:#294764}button:disabled{opacity:.5}button:ho
 <section class="panel"><h2>Esempi da dire al microfono</h2>
 <div class="actions"><button class="alt" data-example="Crea una piastra lunga 120 mm larga 60 mm spessa 5 mm con quattro fori da 8 mm">Piastra forata</button>
 <button class="alt" data-example="Disegna un cilindro diametro 50 mm altezza 30 mm">Cilindro</button>
-<button class="alt" data-example="Fammi una staffa a L lunghezza 120 mm larghezza 60 mm spessore 5 mm altezza 45 mm">Staffa L</button></div>
+<button class="alt" data-example="Fammi una staffa a L lunghezza 120 mm larghezza 60 mm spessore 5 mm altezza 45 mm">Staffa L</button>
+<button class="alt" data-example="Crea una flangia diametro esterno 100 mm spessore 12 mm foro centrale 30 mm interasse fori 70 mm quattro fori fissaggio 8 mm">Flangia industriale</button></div>
 <p class="info">Questa prima versione genera famiglie di geometrie precise, non qualsiasi forma immaginabile. Nessuna licenza CAD a pagamento; l'hosting Railway può avere costi.</p></section></article></main>
 <script>
 const CSRF=/*__CSRF__*/;
@@ -103,7 +104,7 @@ async function api(path,data){
  return out
 }
 function fields(s){
- spec=s;const names={length:'Lunghezza (mm)',width:'Larghezza (mm)',thickness:'Spessore (mm)',height:'Altezza (mm)',diameter:'Diametro (mm)',corner_radius:'Raggio raccordi (mm)'};
+ spec=s;const names={length:'Lunghezza (mm)',width:'Larghezza (mm)',thickness:'Spessore (mm)',height:'Altezza (mm)',diameter:'Diametro (mm)',corner_radius:'Raggio raccordi (mm)',center_hole_diameter:'Foro centrale (mm)',bolt_circle_diameter:'Interasse circolare fori (mm)',bolt_hole_diameter:'Diametro fori fissaggio (mm)',bolt_hole_count:'Numero fori'};
  const div=el('fields');div.replaceChildren();
  Object.entries(names).forEach(([key,name])=>{if(!(key in s))return;
   const label=document.createElement('label');label.textContent=name;
@@ -112,7 +113,7 @@ function fields(s){
  });
  const label=document.createElement('label');label.textContent='Tipo geometria';
  const select=document.createElement('select');select.id='kind';
- [['plate','Piastra'],['block','Blocco'],['cylinder','Cilindro'],['l_bracket','Staffa a L']].forEach(([v,n])=>{const opt=new Option(n,v);select.add(opt)});
+ [['plate','Piastra'],['block','Blocco'],['cylinder','Cilindro'],['l_bracket','Staffa a L'],['flange','Flangia industriale']].forEach(([v,n])=>{const opt=new Option(n,v);select.add(opt)});
  select.value=s.kind;label.appendChild(select);div.appendChild(label)
 }
 function readFields(){
