@@ -5,6 +5,7 @@ from flask import Flask, jsonify, request, redirect, session, render_template_st
 from mastercad.geometry import build, mesh_data
 from mastercad.interpret import interpret
 from mastercad.image_quotes import inspect_image
+from mastercad.backends import capability, infer_with_gpu
 
 app=Flask(__name__)
 app.config.update(SECRET_KEY=os.getenv("FLASK_SECRET_KEY") or secrets.token_urlsafe(48),
@@ -59,7 +60,7 @@ def index():
 
 @app.get("/api/status")
 def status():
-    return jsonify(ok=True,mode="online",voice="browser",cad="CadQuery",ai="interprete a regole",
+    return jsonify(ok=True,mode="online",voice="browser",cad="CadQuery",ai="interprete a regole",backends=capability(),
                    message="SpeechRecognition supportato solo in alcuni browser; la trascrizione può essere remota.")
 
 @app.post("/api/interpret")
@@ -87,6 +88,23 @@ def image_inspection():
         return jsonify(error=str(e)),400
     except RuntimeError as e:
         return jsonify(error=str(e)),503
+
+@app.post("/api/image/infer-gpu")
+def gpu_image_inference():
+    """Opt-in GPU inference. Keep OCR operational when a worker is missing."""
+    if not capability()["gpu"]["configured"]:
+        return jsonify(error="GPU NVIDIA non collegata: puoi continuare con OCR e CAD online.", fallback="/api/image/inspect"),503
+    f=request.files.get("image")
+    if f is None:
+        return jsonify(error="Seleziona un'immagine per la ricostruzione"),400
+    try:
+        data=infer_with_gpu(f.read(4_000_001),
+                            category=request.form.get("category","mechanical_part"))
+        return jsonify(data)
+    except ValueError as exc:
+        return jsonify(error=str(exc)),400
+    except RuntimeError as exc:
+        return jsonify(error=str(exc),fallback="/api/image/inspect"),503
 
 @app.post("/api/build")
 def build_api():
