@@ -12,10 +12,27 @@ def number(value,name,minimum=.1,maximum=1000):
 def validate(spec):
     if not isinstance(spec,dict):raise ValueError("Descrizione geometrica non valida")
     kind=spec.get("kind")
-    if kind not in ("plate","block","cylinder","l_bracket"):
-        raise ValueError("Forma non disponibile: piastra, blocco, cilindro o staffa a L")
+    if kind not in ("plate","block","cylinder","l_bracket","flange"):
+        raise ValueError("Forma non disponibile: piastra, blocco, cilindro, flangia o staffa a L")
     s={"kind":kind}
-    if kind=="cylinder":
+    if kind=="flange":
+        for key in ("diameter","thickness","center_hole_diameter","bolt_circle_diameter","bolt_hole_diameter"):
+            s[key]=number(spec.get(key),key)
+        count=spec.get("bolt_hole_count",4)
+        if not isinstance(count,int) or isinstance(count,bool) or count not in (3,4,6,8):
+            raise ValueError("La flangia supporta 3, 4, 6 o 8 fori di fissaggio")
+        s["bolt_hole_count"]=count
+        outside_radius=s["diameter"]/2
+        hole_radius=s["bolt_hole_diameter"]/2
+        bolt_radius=s["bolt_circle_diameter"]/2
+        center_radius=s["center_hole_diameter"]/2
+        if center_radius>=outside_radius-1 or bolt_radius+hole_radius>=outside_radius-1:
+            raise ValueError("Fori troppo vicini al bordo esterno della flangia")
+        if bolt_radius-hole_radius<=center_radius+1:
+            raise ValueError("Fori di fissaggio sovrapposti al foro centrale")
+        if 2*bolt_radius*math.sin(math.pi/count)<=s["bolt_hole_diameter"]+1:
+            raise ValueError("Fori di fissaggio troppo vicini fra loro")
+    elif kind=="cylinder":
         for key in ("diameter","height"):s[key]=number(spec.get(key),key)
     else:
         for key in ("length","width","thickness"):s[key]=number(spec.get(key),key)
@@ -28,7 +45,7 @@ def validate(spec):
     s["corner_radius"]=radius if kind in ("plate","block") else 0
     holes=spec.get("holes",[])
     if not isinstance(holes,list) or len(holes)>16:raise ValueError("Massimo 16 fori")
-    if kind in ("cylinder","l_bracket") and holes:raise ValueError("Questa forma non supporta ancora fori")
+    if kind in ("cylinder","l_bracket","flange") and holes:raise ValueError("Questa forma non supporta ancora fori")
     s["holes"]=[]
     for hole in holes:
         if not isinstance(hole,dict):raise ValueError("Foro non valido")
@@ -43,7 +60,17 @@ def validate(spec):
 
 def build(spec):
     s=validate(spec);kind=s["kind"]
-    if kind=="cylinder":
+    if kind=="flange":
+        shape=cq.Workplane("XY").circle(s["diameter"]/2).extrude(s["thickness"])
+        center=cq.Workplane("XY").circle(s["center_hole_diameter"]/2).extrude(s["thickness"])
+        shape=shape.cut(center)
+        for index in range(s["bolt_hole_count"]):
+            angle=2*math.pi*index/s["bolt_hole_count"]
+            x=s["bolt_circle_diameter"]/2*math.cos(angle)
+            y=s["bolt_circle_diameter"]/2*math.sin(angle)
+            tool=cq.Workplane("XY").center(x,y).circle(s["bolt_hole_diameter"]/2).extrude(s["thickness"])
+            shape=shape.cut(tool)
+    elif kind=="cylinder":
         shape=cq.Workplane("XY").circle(s["diameter"]/2).extrude(s["height"])
     elif kind=="l_bracket":
         foot=cq.Workplane("XY").box(s["length"],s["width"],s["thickness"],centered=(True,True,False))
