@@ -4,6 +4,7 @@ from pathlib import Path
 from flask import Flask, jsonify, request, redirect, session, render_template_string, Response, send_file, abort
 from mastercad.geometry import build, mesh_data
 from mastercad.interpret import interpret
+from mastercad.image_quotes import inspect_image
 
 app=Flask(__name__)
 app.config.update(SECRET_KEY=os.getenv("FLASK_SECRET_KEY") or secrets.token_urlsafe(48),
@@ -72,6 +73,20 @@ def interpret_api():
         return jsonify(spec=spec,message="Quote comprese: controlla e costruisci il pezzo")
     except (ValueError,TypeError,KeyError) as exc:
         return jsonify(error=str(exc)[:400]),400
+
+@app.post("/api/image/inspect")
+def image_inspection():
+    """Read printed dimensions, but never guess an unmeasured physical size."""
+    file=request.files.get("image")
+    if file is None:
+        return jsonify(error="Seleziona una foto o un disegno quotato"),400
+    try:
+        result=inspect_image(file.read(4_000_001))
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify(error=str(e)),400
+    except RuntimeError as e:
+        return jsonify(error=str(e)),503
 
 @app.post("/api/build")
 def build_api():
