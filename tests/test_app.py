@@ -18,6 +18,20 @@ class CADTests(unittest.TestCase):
     def test_bracket(self):
         s=interpret("Staffa a L lunghezza 120 mm larghezza 60 mm spessore 5 mm altezza 45 mm")
         self.assertAlmostEqual(build(s)[1].Volume(),60000,places=2)
+    def test_spoken_bracket_exact_user_phrase(self):
+        phrase="Fammi una staffa a L lunga 120 millimetri, larga 60, spessa 5 e alta 45 millimetri."
+        spec=interpret(phrase)
+        self.assertEqual(spec["kind"],"l_bracket")
+        self.assertEqual((spec["length"],spec["width"],spec["thickness"],spec["height"]),(120,60,5,45))
+        self.assertGreater(build(spec)[1].Volume(),0)
+
+    def test_spoken_change_to_bracket_thickness(self):
+        original=interpret("Fammi una staffa a L lunga 120 millimetri, larga 60, spessa 5 e alta 45 millimetri.")
+        changed=interpret("Cambia lo spessore a 6 millimetri",original)
+        self.assertEqual(changed["thickness"],6)
+        self.assertEqual(changed["height"],45)
+        self.assertEqual(changed["kind"],"l_bracket")
+
     def test_missing_dimensions(self):
         with self.assertRaisesRegex(ValueError,"Mancano le quote"):
             interpret("Fai una piastra lunga 100")
