@@ -6,6 +6,7 @@ from mastercad.geometry import build, mesh_data
 from mastercad.interpret import interpret
 from mastercad.image_quotes import inspect_image
 from mastercad.backends import capability, infer_with_gpu
+from mastercad.history import operations
 
 app=Flask(__name__)
 app.config.update(SECRET_KEY=os.getenv("FLASK_SECRET_KEY") or secrets.token_urlsafe(48),
@@ -120,7 +121,7 @@ def build_api():
             import cadquery as cq
             cq.exporters.export(obj,str(folder/"model.step"))
             cq.exporters.export(obj,str(folder/"model.stl"),tolerance=.05,angularTolerance=.15)
-        return jsonify(id=token,spec=spec,mesh=mesh,
+        return jsonify(id=token,spec=spec,mesh=mesh,history=operations(spec),
                        exports={"step":"/api/export/"+token+"?format=step",
                                 "stl":"/api/export/"+token+"?format=stl"},
                        warning="Verificare quote, materiali, tolleranze, carichi e sicurezza prima di produrre.")
