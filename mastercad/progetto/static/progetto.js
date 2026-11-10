@@ -73,14 +73,33 @@
     if (!P.base) { log('Manca la forma di base: disegna il contorno e premi ESTRUDI.'); return; }
     log('Costruisco il progetto: base + ' + P.lavorazioni.length + ' lavorazioni…');
     $('prog-costruisci').disabled = true;
+    P.nome = $('nome-pezzo').value.trim() || P.nome || 'Pezzo';
     try {
-      var j = await chiama('/api/progetto/costruisci', {progetto: P, nome: $('nome-pezzo').value || 'Progetto'});
+      var j = await chiama('/api/progetto/costruisci', {progetto: P, nome: P.nome});
       ultimaStoria = j.history || [];
       window.MCAD.mostra3d(j);
       ultimaStoria.forEach(function (s) { log((s.ok === false ? '⚠ ' : '  ✓ ') + s.op + ': ' + s.dettaglio); });
       if (j.saltate) log('⚠ ' + j.saltate + ' lavorazioni saltate: correggi le misure (sono segnate in rosso nell’albero).');
+      fattibilita();
     } catch (e) { log('⛔ ' + e.message); }
     finally { $('prog-costruisci').disabled = false; mostra(); }
+  }
+
+  /* il tecnico esperto controlla il pezzo appena costruito (pareti, fori al bordo, filetti…) */
+  function fattibilita() {
+    var box = $('prog-dfm');
+    if (!box) return;
+    box.innerHTML = '<span class="info">Verifico la fattibilità…</span>';
+    chiama('/api/fattibilita', {progetto: P}).then(function (j) {
+      var t = j.errori ? '⛔ ' + j.errori + (j.errori === 1 ? ' errore' : ' errori') + (j.attenzioni ? ' e ' + j.attenzioni + ' attenzioni' : '') :
+        j.attenzioni ? '⚠ ' + j.attenzioni + (j.attenzioni === 1 ? ' attenzione' : ' attenzioni') + ' di fattibilità' : '✓ Fattibile: nessun problema dalle regole di officina';
+      box.innerHTML = '';
+      var a = document.createElement('a');
+      a.href = '/fattibilita'; a.textContent = t + (j.errori || j.attenzioni ? ' — vedi dove e come rimediare' : '');
+      a.className = j.errori ? 'dfm err' : j.attenzioni ? 'dfm att' : 'dfm ok';
+      box.appendChild(a);
+      if (j.errori) log('⛔ Fattibilità: ' + j.avvisi.filter(function (x) { return x.livello === 'errore'; }).slice(0, 3).map(function (x) { return x.dove + ': ' + x.testo; }).join(' · '));
+    }).catch(function () { box.innerHTML = ''; });
   }
 
   async function impostaBase(come, dati) {
@@ -121,5 +140,10 @@
   $('prog-fronte').onclick = daTavola('fronte');
 
   window.MCADP = {impostaBase: impostaBase, aggiungi: aggiungi, costruisci: costruisci, progetto: function () { return P; }};
+  if (P.nome && !$('nome-pezzo').value) $('nome-pezzo').value = P.nome;
+  $('nome-pezzo').addEventListener('change', function () { P.nome = this.value.trim() || 'Pezzo'; salva(); });
   mostra();
+  // arrivo dalla libreria o dal pannello docente: il pezzo è già pronto, si costruisce subito
+  if (location.hash === '#costruisci') { history.replaceState(null, '', location.pathname); if (P.base) costruisci(); }
+  else if (location.hash === '#foto') { var f = document.getElementById('foto'); if (f) { f.scrollIntoView({behavior: 'smooth'}); f.style.outline = '3px solid #ffd34d'; } }
 })();

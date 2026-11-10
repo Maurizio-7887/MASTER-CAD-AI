@@ -1,0 +1,3 @@
+@google/model-viewer 4.2.0 — Copyright 2019 Google LLC — Apache License 2.0
+https://github.com/google/model-viewer — https://www.apache.org/licenses/LICENSE-2.0
+Il file model-viewer-umd.min.js è distribuito senza modifiche (tolto solo il riferimento alla source map).

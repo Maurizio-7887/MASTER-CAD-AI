@@ -19,6 +19,23 @@ Pagina **/disegno** (pulsante «📐 Disegno come AutoCAD» in alto):
 
 Codice: `mastercad/disegno/` (blueprint, pagina e motore comandi JS), `mastercad/reverse/` (blueprint e analisi della foto), `mastercad/profili.py` (dal 2D al solido CadQuery). Test: `tests/test_disegno_reverse.py`, `node tests/js/comandi.test.js`.
 
+## Novità: home a tile e strumenti d'officina
+
+La home (`/`) è un **launchpad a tile in stile SAP Fiori**, ordinato come si lavora: 1 · Crea il pezzo → 2 · Prepara l'officina → 3 · Vendi e controlla → 4 · Formazione. Ogni tile dice in una riga cosa fa e mostra l'ultimo risultato (lavorazioni, minuti macchina, prezzo, esito del controllo). In alto il percorso in 5 passi e il «pezzo aperto», lo stesso per tutte le pagine. La vecchia pagina vocale è su `/parla`.
+
+| Tile | Cosa fa | Codice |
+|---|---|---|
+| Libreria a norma | Flange EN 1092-1 PN16 (DN15–200), piastra forata, staffa a L, boccola, albero a gradini: progetto pronto e modificabile | `mastercad/libreria/` |
+| Verifica fattibilità | Regole di officina: parete foro-bordo e foro-foro, lamature più profonde dello spessore, fori lunghi, filetti troppo corti/lunghi, angoli vivi delle tasche, fondi sottili, gusci sottili. Anche come avviso automatico nel CAD | `mastercad/fattibilita/` |
+| Disegno tecnico | Tavola A3 metodo E: frontale, pianta, sezione A-A (o vista laterale) con linee nascoste (HLR OpenCascade), assonometria, quote d'ingombro, tabella fori con coordinate, viteria ISO 4762, note, cartiglio. PDF, DXF a layer, SVG | `mastercad/tavola/` |
+| Ciclo di lavoro e CNC | Fasi (taglio, lato A, lato B, sbavatura, controllo), utensili, giri e avanzamenti dal materiale, tempi; programma ISO Fanuc/Haas (spianatura, contornatura, tasche, asole, rialzi, cicli fissi G81/G83/G84/G82/G85 con G98, interpolazione elicoidale dei fori oltre Ø25, barenatura), solo ASCII | `mastercad/ciclo/` |
+| Preventivo istantaneo | Grezzo × €/kg + minuti × €/ora + attrezzaggio sul lotto + trattamento + scarto + margine, a scaglioni di quantità, stampabile | `mastercad/preventivo/` |
+| Controllo qualità foto | Foto del pezzo prodotto su A4 → allineamento automatico (4 rotazioni + Kabsch robusto) → verbale OK/KO per ingombri e fori, sovrapposizione grafica, storico in PostgreSQL | `mastercad/qualita/` |
+| Pezzo in AR | GLB in metri + `<model-viewer>` (incluso nel repo, Apache-2.0) + QR: il telefono apre il pezzo a grandezza reale (link pubblico a token, 7 giorni) | `mastercad/ar/` |
+| Pannello docente / I miei esercizi | Corsi con codice, esercizi con foto e indicazioni, accesso allievi con PIN, diario delle azioni (comandi, foto, indicazioni, costruzioni), tempo lavorato, consegne con voto automatico (volumi, fori, ingombri, lavorazioni) e correzione del docente | `mastercad/corso/` |
+
+Materiali e parametri di taglio sono in un solo posto (`mastercad/materiali.py`); tavola, ciclo, preventivo, fattibilità e controllo leggono le stesse misure (`mastercad/progetto/analisi.py`), così non si contraddicono. Test: `tests/test_officina.py`.
+
 ## Novità: progetto complesso con le indicazioni del tecnico
 
 Dalla foto (o dal disegno) al **pezzo completo**, come in un CAD parametrico:

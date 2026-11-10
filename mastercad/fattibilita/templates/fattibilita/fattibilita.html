@@ -1,0 +1,20 @@
+{% extends "home/base.html" %}
+{% block titolo %}Verifica fattibilità · MASTER CAD AI{% endblock %}
+{% block barra %}Verifica fattibilità{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Verifica di fattibilità</h1>
+<p class="sotto">Il tecnico esperto dentro il programma: controlla il pezzo con le regole di officina prima che arrivi in macchina. Ogni avviso dice <b>dove</b>, <b>perché</b> e <b>come rimediare</b>.</p></div></div>
+<div id="pezzo"></div>
+<div id="corpo" hidden>
+  <div class="kpi-riga" id="kpi"></div>
+  <div id="msg" class="messaggio" hidden></div>
+  <section class="carta"><div class="scorri"><table class="dati" id="avvisi"><tr><td class="vuoto-stato">Controllo in corso…</td></tr></table></div>
+    <div class="azioni"><a class="btn" href="/disegno">Correggi nel CAD</a><button class="btn sec" id="ripeti">Ricontrolla</button></div></section>
+  <div class="aiuto"><b>Cosa controlla</b><ol>
+    <li>Fori: parete verso il bordo e fra un foro e l'altro, profondità rispetto al diametro, lamature più profonde dello spessore, fori sotto 1 mm.</li>
+    <li>Filetti: lunghezza utile (fra 1 e 2 volte il diametro), fondo del foro cieco, filetti passanti su lamiere sottili.</li>
+    <li>Tasche e asole: angoli vivi impossibili di fresa, raggi troppo piccoli, cave profonde e strette, fondo troppo sottile.</li>
+    <li>Gusci e spessori sottili, lavorazioni che il motore 3D non ha potuto eseguire.</li></ol></div>
+</div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('fattibilita.static', filename='fattibilita.js') }}"></script>{% endblock %}

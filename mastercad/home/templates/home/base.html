@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block titolo %}MASTER CAD AI{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('home.static', filename='fiori.css') }}">
+{% block testa %}{% endblock %}
+</head>
+<body data-csrf="{{ csrf }}">
+<header class="shell">
+  <a class="logo" href="/">MASTER <b>CAD AI</b></a>
+  {% if not home %}<a class="bottone" href="/" title="Torna alla home">⌂ Home</a>{% endif %}
+  <span class="titolo">{% block barra %}{% endblock %}</span>
+  <span class="spazio"></span>
+  {% set allievo = session.get('allievo') if not session.get('ok') else None %}
+  <span class="utente"><span class="avatar">{{ (allievo.nome[:1] if allievo else 'D')|upper }}</span><span>{{ allievo.nome if allievo else 'Docente / ufficio tecnico' }}</span></span>
+  <button type="button" id="esci">Esci</button>
+</header>
+<main class="pagina">
+{% block contenuto %}{% endblock %}
+</main>
+<script src="{{ url_for('home.static', filename='comune.js') }}"></script>
+{% block script %}{% endblock %}
+</body></html>

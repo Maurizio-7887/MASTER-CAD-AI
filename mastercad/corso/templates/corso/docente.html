@@ -1,0 +1,37 @@
+{% extends "home/base.html" %}
+{% block titolo %}Pannello docente · MASTER CAD AI{% endblock %}
+{% block barra %}Pannello docente{% endblock %}
+{% block testa %}<style>.codice-corso{font:800 28px ui-monospace,Consolas,monospace;letter-spacing:.06em;color:var(--blu)}tr.cliccabile{cursor:pointer}tr.cliccabile:hover td{background:#f5f9ff}.diario{max-height:420px;overflow:auto}</style>{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Pannello docente</h1>
+<p class="sotto">Crea il corso e dai il codice agli allievi: entrano da <b>{{ request.host_url }}corso/entra</b>. Per ogni allievo vedi quanto ha lavorato, cosa ha fatto passo per passo e le consegne con il voto automatico, che puoi confermare o cambiare.</p></div></div>
+<div id="msg" class="messaggio" hidden></div>
+<div class="griglia">
+  <div>
+    <section class="carta"><h2>Corsi</h2><table class="dati" id="corsi"></table>
+      <label for="nuovo-corso">Nuovo corso</label><div style="display:flex;gap:8px"><input id="nuovo-corso" placeholder="es. ITS Meccatronica 2026"><button class="btn" id="crea-corso">Crea</button></div></section>
+    <section class="carta" id="nuovo-es" hidden><h2>Nuovo esercizio</h2>
+      <label for="e-titolo">Titolo</label><input id="e-titolo" maxlength="150" placeholder="es. Flangia dalla foto">
+      <label for="e-consegna">Consegna (cosa deve fare l'allievo)</label><textarea id="e-consegna" rows="3" placeholder="Ricava il pezzo dalla foto e completalo con le indicazioni del tecnico."></textarea>
+      <label for="e-ind">Indicazioni del tecnico (le vede l'allievo)</label><textarea id="e-ind" rows="3" placeholder="spessore 15; foro centrale Ø30; 4 fori M8 lamati su interasse 70"></textarea>
+      <label for="e-foto">Foto del pezzo (facoltativa)</label><input id="e-foto" type="file" accept="image/jpeg,image/png,image/webp">
+      <label style="display:flex;gap:8px;align-items:flex-start;color:var(--testo)"><input type="checkbox" id="e-sol" style="width:auto;margin-top:3px" checked><span>Soluzione = il pezzo aperto ora: <b id="e-sol-nome"></b></span></label>
+      <p class="sotto" style="font-size:12px;margin:4px 0 0">Con la soluzione il voto è automatico; senza, la consegna resta da correggere a mano.</p>
+      <div class="azioni"><button class="btn" id="crea-es">Pubblica l'esercizio</button></div></section>
+  </div>
+  <div>
+    <section class="carta" id="corso" hidden>
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><h2 id="c-nome"></h2><div class="sotto" style="margin:0">Codice da dare agli allievi:</div><div class="codice-corso" id="c-codice"></div></div><div class="kpi-riga" id="c-kpi"></div></div>
+      <h3 style="margin-top:14px">Esercizi</h3><div class="scorri"><table class="dati" id="c-es"></table></div>
+      <h3 style="margin-top:14px">Allievi</h3><div class="scorri"><table class="dati" id="c-al"></table></div>
+    </section>
+    <section class="carta" id="allievo" hidden>
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h2 id="a-nome"></h2><div class="azioni" style="margin:0"><button class="btn sec" id="a-lavoro">Apri il lavoro in corso nel CAD</button><button class="btn sec" id="a-pin">Azzera PIN</button></div></div>
+      <div class="kpi-riga" id="a-kpi"></div>
+      <h3>Consegne</h3><div id="a-consegne"></div>
+      <h3 style="margin-top:14px">Diario delle azioni</h3><div class="diario scorri"><table class="dati" id="a-diario"></table></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('corso.static', filename='docente.js') }}"></script>{% endblock %}

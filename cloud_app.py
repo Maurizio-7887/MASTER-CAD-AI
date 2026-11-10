@@ -12,6 +12,15 @@ from mastercad.postgres_store import init_db, save_model, project_list, get_proj
 from mastercad.disegno import bp as disegno_bp
 from mastercad.reverse import bp as reverse_bp
 from mastercad.progetto import bp as progetto_bp
+from mastercad.home import bp as home_bp
+from mastercad.tavola import bp as tavola_bp
+from mastercad.ciclo import bp as ciclo_bp
+from mastercad.preventivo import bp as preventivo_bp
+from mastercad.fattibilita import bp as fattibilita_bp
+from mastercad.libreria import bp as libreria_bp
+from mastercad.ar import bp as ar_bp, init_db as ar_init_db
+from mastercad.qualita import bp as qualita_bp, init_db as qualita_init_db
+from mastercad.corso import bp as corso_bp, init_db as corso_init_db
 
 app=Flask(__name__)
 app.config.update(SECRET_KEY=os.getenv("FLASK_SECRET_KEY") or secrets.token_urlsafe(48),
@@ -23,15 +32,27 @@ OUTPUT=Path(os.getenv("MASTER_CAD_OUTPUT","/tmp/mastercad-projects"))
 app.register_blueprint(disegno_bp)
 app.register_blueprint(reverse_bp)
 app.register_blueprint(progetto_bp)
+for _bp in (home_bp, tavola_bp, ciclo_bp, preventivo_bp, fattibilita_bp, libreria_bp, ar_bp, qualita_bp, corso_bp):
+    app.register_blueprint(_bp)
+# pagine aperte senza login: accesso, salute, vista AR condivisa con il QR, ingresso allievi
+PUBBLICHE=("/health","/login","/corso/entra")
+PUBBLICHE_PREFISSI=("/ar/v/","/ar/static/","/home/static/","/corso/static/")
+# l'allievo usa il CAD e gli strumenti, ma non il pannello docente né l'elenco di tutti i progetti
+VIETATE_ALLIEVO=("/corso/docente","/api/corso/docente","/api/projects")
 _LOCK=threading.Lock()
 LOGIN="""<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MASTER CAD AI · Accesso</title>
 <style>body{background:#0b1424;color:#e5f2ff;display:grid;place-items:center;min-height:100vh;font:16px system-ui}main{background:#15253b;border:1px solid #36546d;border-radius:16px;padding:30px;width:min(400px,85vw)}input,button{width:100%;box-sizing:border-box;padding:14px;margin-top:12px;border-radius:8px;font:inherit}input{background:#101a2b;color:white;border:1px solid #658099}button{background:#208aad;color:white;border:0;cursor:pointer}.err{color:#ffb0b0}</style></head><body><main><h1>MASTER CAD AI</h1><p>CAD 3D da voce e descrizioni in italiano</p>
-{% if error %}<p class="err">{{error}}</p>{% endif %}<form method="post" action="/login"><label>Password del servizio<input type="password" name="password" required autocomplete="current-password"></label><button>Accedi</button></form><p style="font-size:12px">Configura MASTER_CAD_PASSWORD nelle Variables di Railway.</p></main></body></html>"""
+{% if error %}<p class="err">{{error}}</p>{% endif %}<form method="post" action="/login"><label>Password del servizio<input type="password" name="password" required autocomplete="current-password"></label><button>Accedi</button></form><p style="font-size:13px"><a style="color:#9fd8f0" href="/corso/entra">Sei un allievo? Entra con il codice del corso →</a></p><p style="font-size:12px">Configura MASTER_CAD_PASSWORD nelle Variables di Railway.</p></main></body></html>"""
 
 @app.before_request
 def auth():
-    if request.path in ("/health","/login"): return
-    if not os.getenv("MASTER_CAD_PASSWORD") or not session.get("ok"):
+    if request.path in PUBBLICHE or request.path.startswith(PUBBLICHE_PREFISSI): return
+    allievo=session.get("allievo")
+    if allievo and not session.get("ok"):
+        if request.path.startswith(VIETATE_ALLIEVO):
+            if request.path.startswith("/api/"): return jsonify(error="Riservato al docente"),403
+            return redirect("/")
+    elif not os.getenv("MASTER_CAD_PASSWORD") or not session.get("ok"):
         if request.path.startswith("/api/"): return jsonify(error="Accesso richiesto"),401
         return redirect("/login")
     if request.method not in ("GET","HEAD","OPTIONS"):
@@ -45,7 +66,7 @@ def headers(response):
     response.headers["Cache-Control"]="no-store"
     response.headers["X-Content-Type-Options"]="nosniff"
     response.headers["X-Frame-Options"]="DENY"
-    response.headers["Content-Security-Policy"]="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'"
+    response.headers["Content-Security-Policy"]="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; connect-src 'self' blob: data:; worker-src 'self' blob:; media-src 'self' blob:"
     return response
 
 @app.get("/health")
@@ -67,10 +88,11 @@ def login():
 
 @app.post("/logout")
 def logout():
+    allievo=bool(session.get("allievo"))
     session.clear()
-    return jsonify(ok=True,redirect="/login")
+    return jsonify(ok=True,redirect="/corso/entra" if allievo else "/login")
 
-@app.get("/")
+@app.get("/parla")
 def index():
     html=(Path(__file__).parent/"web"/"index.html").read_text(encoding="utf-8")
     return Response(html.replace("/*__CSRF__*/",json.dumps(session["csrf"])),mimetype="text/html")
@@ -183,3 +205,6 @@ def too_big(_):
 
 # Required PostgreSQL: ensure tables exist before serving CAD requests.
 init_db()
+ar_init_db()
+qualita_init_db()
+corso_init_db()

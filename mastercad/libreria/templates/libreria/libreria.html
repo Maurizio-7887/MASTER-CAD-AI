@@ -1,0 +1,33 @@
+{% extends "home/base.html" %}
+{% block titolo %}Libreria a norma · MASTER CAD AI{% endblock %}
+{% block barra %}Libreria a norma{% endblock %}
+{% block testa %}<style>.cat{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}.cat .carta{display:flex;flex-direction:column}.cat form{flex:1;display:flex;flex-direction:column}.cat .azioni{margin-top:auto;padding-top:12px}.norma{font-size:12px;color:var(--testo2)}</style>{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Libreria di pezzi a norma</h1>
+<p class="sotto">Scegli il pezzo, scrivi le misure: il progetto si apre nel CAD già completo di fori e smussi, e da lì lo modifichi come vuoi. Le tabelle sono indicative: verificale sulla norma in vigore.</p></div></div>
+<div id="msg" class="messaggio" hidden></div>
+<div class="cat">
+{% for c in catalogo %}
+  <section class="carta">
+    <h2>{{ c.nome }}</h2>
+    <div class="norma">{{ c.norma }}</div>
+    <p style="margin:8px 0 0">{{ c.descrizione }}</p>
+    <form data-codice="{{ c.codice }}">
+      {% for f in c.campi %}
+        {% if f.tipo == 'scelta' %}
+          <label>{{ f.etichetta }}<select name="{{ f.nome }}">{% for v in f.valori %}<option value="{{ v }}" {% if v == f.predefinito %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+        {% elif f.tipo == 'si_no' %}
+          <label style="display:flex;gap:8px;align-items:center;color:var(--testo)"><input type="checkbox" name="{{ f.nome }}" style="width:auto" {% if f.predefinito %}checked{% endif %}> {{ f.etichetta }}</label>
+        {% elif f.tipo == 'testo' %}
+          <label>{{ f.etichetta }}<input name="{{ f.nome }}" value="{{ f.predefinito }}"></label>
+        {% else %}
+          <label>{{ f.etichetta }}<input name="{{ f.nome }}" type="number" step="any" value="{{ f.predefinito }}"></label>
+        {% endif %}
+      {% endfor %}
+      <div class="azioni"><button class="btn" type="submit">Apri nel CAD</button></div>
+    </form>
+  </section>
+{% endfor %}
+</div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('libreria.static', filename='libreria.js') }}"></script>{% endblock %}

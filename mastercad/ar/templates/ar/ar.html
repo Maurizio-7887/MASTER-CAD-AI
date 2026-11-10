@@ -1,0 +1,23 @@
+{% extends "home/base.html" %}
+{% block titolo %}Pezzo in AR · MASTER CAD AI{% endblock %}
+{% block barra %}Pezzo in realtà aumentata{% endblock %}
+{% block testa %}<script src="{{ url_for('ar.static', filename='vendor/model-viewer-umd.min.js') }}"></script>
+<style>model-viewer{width:100%;height:min(62vh,560px);background:radial-gradient(circle at 50% 35%,#ffffff,#dfe5ea);border-radius:12px}#qr svg{width:100%;max-width:240px;height:auto;display:block;margin:0 auto}#link{word-break:break-all;font-size:12.5px}</style>{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Il pezzo sul tavolo, a grandezza reale</h1>
+<p class="sotto">Ruota il pezzo col mouse. Poi inquadra il QR con il telefono: si apre il pezzo e con «Vedi nel tuo spazio» lo appoggi sulla scrivania del cliente, in scala 1:1, prima ancora di produrlo.</p></div></div>
+<div id="pezzo"></div>
+<div class="griglia" id="corpo" hidden style="grid-template-columns:1fr minmax(260px,320px)">
+  <section class="carta"><model-viewer id="mv" camera-controls touch-action="pan-y" shadow-intensity="1" exposure="1.05" alt="Modello 3D del pezzo"></model-viewer>
+    <p class="sotto" id="misure" style="margin:8px 0 0"></p></section>
+  <section class="carta">
+    <h2>Sul telefono</h2>
+    <div id="qr"><div class="vuoto-stato"><span class="carico" style="border-color:var(--blu);border-right-color:transparent"></span> Preparo il modello…</div></div>
+    <ol style="font-size:13px;padding-left:18px"><li>Apri la fotocamera del telefono e inquadra il codice.</li><li>Tocca «Vedi nel tuo spazio» (Android/iPhone).</li><li>Muovi il telefono sul tavolo finché compare il pezzo.</li></ol>
+    <p id="link"></p>
+    <p class="sotto" style="font-size:12px">Il link apre solo questo modello 3D, senza password, ed è valido 7 giorni: mandalo solo a chi deve vederlo.</p>
+    <div id="msg" class="messaggio" hidden></div>
+  </section>
+</div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('ar.static', filename='ar.js') }}"></script>{% endblock %}
