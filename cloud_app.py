@@ -40,9 +40,9 @@ app.register_blueprint(progetto_bp)
 for _bp in (home_bp, tavola_bp, ciclo_bp, preventivo_bp, fattibilita_bp, libreria_bp, ar_bp, qualita_bp, corso_bp,
             officina_bp, versioni_bp, tolleranze_bp, generativo_bp, assiemi_bp):
     app.register_blueprint(_bp)
-# pagine aperte senza login: accesso, salute, vista AR condivisa con il QR, ingresso allievi
+# pagine aperte senza login: accesso, salute, vista AR condivisa con il QR, montaggio guidato (link segreto), ingresso allievi
 PUBBLICHE=("/health","/login","/corso/entra")
-PUBBLICHE_PREFISSI=("/ar/v/","/ar/static/","/home/static/","/corso/static/")
+PUBBLICHE_PREFISSI=("/ar/v/","/ar/static/","/home/static/","/corso/static/","/assiemi/m/")
 # l'allievo usa il CAD e gli strumenti, ma non il pannello docente né l'elenco di tutti i progetti
 VIETATE_ALLIEVO=("/corso/docente","/api/corso/docente","/api/projects")
 _LOCK=threading.Lock()

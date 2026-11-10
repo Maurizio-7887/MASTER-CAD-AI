@@ -211,11 +211,14 @@ def _accoppiamento(nome, d, foro, albero):
             "tipo": tipo, "gioco_min_um": gmin, "gioco_max_um": gmax}
 
 
-def monta(assieme, montaggi, cache=None):
+def monta(assieme, montaggi, cache=None, officina=None):
+    from ..officina import PREDEFINITA
+    from . import gdt, istruzioni
     cache = cache or Cache()
+    officina = officina or PREDEFINITA
     comps = [copy.deepcopy(c) for c in assieme.get("componenti") or []]
     per_id = {c["id"]: c for c in comps}
-    verifiche, esclusi, commerciali = [], set(), []
+    verifiche, esclusi, commerciali, legami = [], set(), [], []
 
     def esito(livello, voce, testo, norma=""):
         verifiche.append({"livello": livello, "voce": voce, "testo": testo, "norma": norma})
@@ -238,6 +241,8 @@ def monta(assieme, montaggi, cache=None):
             B["pos"] = [t[0], t[1], bA.zmax - bB.zmin]
             fB = {f["rif"]: f for f in fori_mondo(B, anB)}
             interfaccia = bA.zmax
+            lg = {"tipo": "impila", "sotto": A["id"], "sopra": B["id"], "spine": [], "viti": [], "comm_spine": [], "comm_viti": []}
+            legami.append(lg)
             for ra, rb in m.get("spine") or []:
                 a, b = fA[ra], fB[rb]
                 if math.hypot(a["wx"] - b["wx"], a["wy"] - b["wy"]) > TOL:
@@ -254,6 +259,8 @@ def monta(assieme, montaggi, cache=None):
                 commerciali.append({"id": cid, "tipo": "spina", "nome": "Spina ISO 8734 Ø%s×%d" % (_num(d), Lsp), "codice": "ISO 8734 %sx%d" % (_num(d), Lsp),
                                     "solido": C.solido_spina(d, Lsp).translate(cq.Vector(a["wx"], a["wy"], interfaccia - pa))})
                 esclusi |= {(cid, A["id"]), (cid, B["id"])}
+                lg["spine"].append((ra, rb))
+                lg["comm_spine"].append({"cid": cid, "d": d, "L": Lsp, "wx": a["wx"], "wy": a["wy"], "nome": commerciali[-1]["nome"]})
                 ok = pa >= d and Lsp - pa >= d
                 acc = _accoppiamento("Spina Ø%s m6 nel foro H7" % _num(d), d, iso286.scostamenti(d, a["tolleranza"] or "H7"), iso286.scostamenti(d, "m6"))
                 esito("ok" if ok else "attenzione", "Spina Ø%s×%d (fori %d ↔ %d)" % (_num(d), Lsp, ra, rb),
@@ -272,6 +279,9 @@ def monta(assieme, montaggi, cache=None):
                 commerciali.append({"id": cid, "tipo": "vite", "nome": "Vite ISO 4762 %s×%d 8.8" % (vite, Lv), "codice": "ISO 4762 %sx%d-8.8" % (vite, Lv),
                                     "solido": C.solido_vite(vite, Lv).translate(cq.Vector(b["wx"], b["wy"], testa_z))})
                 esclusi |= {(cid, A["id"]), (cid, B["id"])}
+                lg["viti"].append((ra, rb))
+                lg["presa_vite"] = presa
+                lg["comm_viti"].append({"cid": cid, "m": vite, "L": Lv, "wx": b["wx"], "wy": b["wy"]})
                 d = float(vite[1:])
                 testo = "Presa %s mm + avvitamento %s mm (%s d) su filetto disponibile %s mm" % (_num(presa), _num(avv), _num(avv / d), _num(disponibile))
                 if not ok:
@@ -294,11 +304,14 @@ def monta(assieme, montaggi, cache=None):
             commerciali.append({"id": cid, "tipo": "cuscinetto", "nome": "Cuscinetto %s (d%g×D%g×B%g)" % (codice, d, D, Bw), "codice": codice,
                                 "solido": C.solido_cuscinetto(codice).translate(cq.Vector(f["wx"], f["wy"], z0))})
             esclusi.add((cid, A["id"]))
+            lg = {"tipo": "cuscinetto", "pezzo": A["id"], "foro": f["rif"], "codice": codice, "cid": cid, "d": d, "albero": None}
+            legami.append(lg)
             sede = f["lamatura"] if f["lamatura"] else {"d": f["d"], "tolleranza": f["tolleranza"]}
             sig = sede.get("tolleranza") or "H7"
             if abs(float(sede["d"]) - D) > 0.01:
                 esito("errore", "Cuscinetto %s" % codice, "La sede è Ø%s ma il cuscinetto ha D=%g" % (_num(sede["d"]), D))
             est = _accoppiamento("Anello esterno in sede %s" % sig, D, iso286.scostamenti(D, sig), C.iso492(D, True))
+            lg["esterno"] = est["testo"]
             esito("ok" if est["tipo"] != "interferenza" else "attenzione", "Cuscinetto %s · anello esterno" % codice,
                   est["testo"] + " — alloggiamento fisso: l'anello esterno deve poter scorrere assialmente (lato libero).", "ISO 492 classe normale, ISO 286")
             if m.get("albero", True):
@@ -313,6 +326,7 @@ def monta(assieme, montaggi, cache=None):
                 per_id[aid] = alb
                 esclusi.add((aid, cid))
                 inn = _accoppiamento("Albero k5 nell'anello interno", d, C.iso492(d), iso286.scostamenti(d, "k5"))
+                lg.update(albero=aid, interferenza_max_um=-inn["gioco_min_um"])
                 esito("ok" if inn["tipo"] != "gioco" else "errore", "Cuscinetto %s · anello interno" % codice,
                       inn["testo"] + " — carico rotante sull'anello interno: serve interferenza (montaggio a pressa o a caldo).", "ISO 492 classe normale, ISO 286 k5")
                 passaggio = f["d"]
@@ -345,7 +359,15 @@ def monta(assieme, montaggi, cache=None):
                 esito("errore", "Collisione", "«%s» e «%s» si compenetrano per %s mm³" % (solidi[a][1]["nome"], solidi[b][1]["nome"], _num(v)), "")
     if not any(v["voce"] == "Collisione" for v in verifiche):
         esito("ok", "Collisioni", "Nessuna compenetrazione fra i %d componenti" % len(solidi), "")
-    return {"componenti": comps, "commerciali": commerciali, "solidi": solidi, "verifiche": verifiche, "distinta": distinta(comps, commerciali, cache)}
+    tolleranze, avvisi = gdt.deduci(comps, legami, cache, officina)
+    for a in avvisi:
+        esito("attenzione", "Precisione officina · %s" % a["pezzo"], a["testo"], "ISO 1101")
+    for c in comps:
+        if c["id"] in tolleranze:
+            c["tolleranze_geometriche"] = tolleranze[c["id"]]
+            c["progetto_tollerato"] = gdt.applica(c["progetto"], tolleranze[c["id"]], assieme.get("nome") or "Assieme")
+    return {"componenti": comps, "commerciali": commerciali, "solidi": solidi, "verifiche": verifiche, "distinta": distinta(comps, commerciali, cache),
+            "legami": legami, "istruzioni": istruzioni.passi(comps, commerciali, legami, officina)}
 
 
 def distinta(comps, commerciali, cache):
@@ -370,7 +392,7 @@ def distinta(comps, commerciali, cache):
     return list(pezzi.values()) + sorted(comm.values(), key=lambda r: r["descrizione"])
 
 
-def esporta_glb(solidi, esploso=False):
+def esporta_glb(solidi, esploso=False, evidenzia=()):
     from ..ar import glb_in_metri
     import tempfile
     from pathlib import Path
@@ -382,7 +404,7 @@ def esporta_glb(solidi, esploso=False):
             b = s.BoundingBox()
             extra = 1.6 if c.get("tipo") in ("vite", "cuscinetto") else 1.0
             s = s.translate(cq.Vector(0, 0, ((b.zmin + b.zmax) / 2 - z0) * 1.4 * extra))
-        a.add(s, name="%s_%d" % ("".join(ch for ch in k if ch.isalnum()), i), color=cq.Color(*col))
+        a.add(s, name="%s_%d" % ("".join(ch for ch in k if ch.isalnum()), i), color=cq.Color(*((1.0, 0.55, 0.1) if k in evidenzia else col)))
     with tempfile.TemporaryDirectory(prefix="cad-assieme-") as tmp:
         p = Path(tmp) / "assieme.glb"
         a.export(str(p))

@@ -21,9 +21,9 @@ LAVORAZIONI_TERZI = {"fresatura": "Fresatura CNC", "tornitura": "Tornitura CNC",
 PREDEFINITA = {
     "nome": "La mia officina",
     "macchine": [
-        {"nome": "Centro di lavoro 3 assi", "tipo": "fresa", "x": 800, "y": 500, "z": 500, "costo_ora": 55, "attiva": True},
-        {"nome": "Tornio CNC", "tipo": "tornio", "diametro": 300, "lunghezza": 600, "costo_ora": 45, "attiva": True},
-        {"nome": "Sega a nastro", "tipo": "sega", "diametro": 250, "costo_ora": 30, "attiva": True},
+        {"nome": "Centro di lavoro 3 assi", "tipo": "fresa", "x": 800, "y": 500, "z": 500, "costo_ora": 55, "precisione": 0.01, "attiva": True},
+        {"nome": "Tornio CNC", "tipo": "tornio", "diametro": 300, "lunghezza": 600, "costo_ora": 45, "precisione": 0.005, "attiva": True},
+        {"nome": "Sega a nastro", "tipo": "sega", "diametro": 250, "costo_ora": 30, "precisione": 0.5, "attiva": True},
     ],
     "terzisti": [
         {"nome": "Terzista rettifiche", "lavorazioni": ["rettifica"], "costo_ora": 65, "giorni": 5},
@@ -81,6 +81,8 @@ def valida(d):
         for k in ("x", "y", "z", "diametro", "lunghezza"):
             if m.get(k) not in (None, ""):
                 x[k] = _num(m[k], "Corsa " + k, 1, 20000)
+        if m.get("precisione") not in (None, ""):
+            x["precisione"] = _num(m["precisione"], "Precisione", 0.001, 5)
         o["macchine"].append(x)
     for t in (d.get("terzisti") or [])[:40]:
         lav = [x for x in (t.get("lavorazioni") or []) if x in LAVORAZIONI_TERZI]
@@ -96,6 +98,20 @@ def valida(d):
     o["costi"] = {"banco": _num(c.get("banco", 32), "Costo banco", 1, 1000), "attrezzaggio": _num(c.get("attrezzaggio", 45), "Costo attrezzaggio", 1, 1000),
                   "margine": _num(c.get("margine", 25), "Margine", 0, 300), "scarto": _num(c.get("scarto", 3), "Scarto", 0, 50)}
     return o
+
+
+# precisione tipica (mm) che una macchina garantisce su posizione e forma, se non l'hai scritta tu
+PRECISIONE_TIPICA = {"fresa": 0.01, "tornio": 0.005, "rettifica": 0.002, "rettifica_piana": 0.003, "sega": 0.5, "laser": 0.1, "elettroerosione": 0.003}
+
+
+def capacita(off, tipo):
+    """La precisione migliore fra le macchine interne attive di quel tipo; se manca la macchina, il terzista (precisione tipica)."""
+    macc = [m for m in (off or {}).get("macchine") or [] if m.get("tipo") == tipo and m.get("attiva", True)]
+    if macc:
+        m = min(macc, key=lambda m: float(m.get("precisione") or PRECISIONE_TIPICA.get(tipo, 0.05)))
+        return {"macchina": m["nome"], "precisione": float(m.get("precisione") or PRECISIONE_TIPICA.get(tipo, 0.05)), "interna": True}
+    ter = next((t for t in (off or {}).get("terzisti") or [] if tipo in (t.get("lavorazioni") or []) or (tipo.startswith("rettifica") and "rettifica" in (t.get("lavorazioni") or []))), None)
+    return {"macchina": ter["nome"] if ter else "macchina da terzista", "precisione": PRECISIONE_TIPICA.get(tipo, 0.05), "interna": False}
 
 
 def scegli_macchina(off, tipo, ingombro):

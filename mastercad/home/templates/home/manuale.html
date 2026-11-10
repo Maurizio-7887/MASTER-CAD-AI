@@ -53,7 +53,16 @@
 <li>Nella pagina Assiemi aggiungi i pezzi («pezzo aperto nel CAD» o un progetto salvato con una versione). Il primo è la base fissa.</li>
 <li>«Proponi i montaggi»: il programma cerca come appoggiare ogni pezzo sugli altri (4 rotazioni, anche capovolto) in modo che spine e viti coincidano, e propone cuscinetto e albero per ogni sede.</li>
 <li>«Monta e verifica»: mette spine ISO 8734 e viti ISO 4762 della lunghezza giusta, il cuscinetto e l'albero (con il tratto k5 sotto l'anello interno), poi verifica: giochi e interferenze degli anelli (ISO 492 + ISO 286), presa delle spine, avvitamento delle viti (1–2 d), gioco dell'albero nel passaggio, collisioni fra tutti i pezzi.</li>
-<li>Vedi l'assieme montato o esploso, anche in AR con il QR, e scarichi la distinta base (CSV). L'albero generato si apre nel CAD per tavola, ciclo (con la rettifica del tratto k5) e preventivo.</li></ol></section>
+<li>Vedi l'assieme montato o esploso, anche in AR con il QR, e scarichi la distinta base (CSV). L'albero generato si apre nel CAD per tavola, ciclo (con la rettifica del tratto k5) e preventivo.</li>
+<li><b>Tolleranze geometriche dedotte</b>: dal montaggio il programma calcola i riquadri ISO 1101 di ogni pezzo, con il perché e lo strumento di controllo:
+<ul><li>viti: posizione dei passaggi e dei filetti dal gioco vite/foro (T = H − F, metà per pezzo), Ⓜ sul passaggio (calibro funzionale), Ⓟ sul filetto;</li>
+<li>spine: se il gioco minimo spina/foro è negativo (m6 in H7) nessun interasse garantisce il montaggio con fori fatti separatamente → preforo Ø d−0,2 nei pezzi e <b>alesatura in opera</b>; il ciclo toglie l'alesatura dal pezzo e la tavola lo scrive nelle note;</li>
+<li>sede cuscinetto: cilindricità IT6/2, oscillazione dello spallamento IT6, perpendicolarità all'appoggio dal disallineamento ammesso; sull'albero IT5/2 e IT5;</li>
+<li>ogni valore è confrontato con la <b>precisione delle tue macchine</b> (colonna «Precis. mm» in La mia officina): se non ci arrivano, l'avviso dice cosa fare.</li></ul>
+«Apri nel CAD con le tolleranze» porta i riquadri in tavola, nel ciclo e nel piano di controllo.</li>
+<li><b>Istruzioni di montaggio</b>: sequenza giusta (es. viti serrate prima di alesare in opera le spine), coppie di serraggio (classe 8.8, μ 0,12, VDI 2230) in due passate con l'ordine a croce, cuscinetto a pressa sull'anello interno o a caldo con la temperatura calcolata dall'interferenza, controlli finali, tempo e costo del montaggio con la tariffa del banco.</li>
+<li><b>Montaggio guidato sul telefono</b>: il montatore inquadra il QR (senza password, il link è segreto), vede un passo alla volta con il 3D dei pezzi da aggiungere in arancio, anche sul banco in AR, e conferma «fatto» o «problema» con il suo nome. In ufficio «Aggiorna avanzamento» mostra chi ha fatto cosa e quando.</li></ol>
+<p>Limiti: i pezzi si impilano lungo Z; le regole di planarità delle facce di appoggio sono regole d'officina; i tempi di banco sono standard da tarare.</p></section>
 
 <section class="carta" style="--c:#7858ff"><h2 id="tolleranze">Accoppiamenti e tolleranze</h2>
 <p>Calcolo di giochi e interferenze ISO 286 (es. Ø20 H7/g6), catene di tolleranza nel caso peggiore e statistico, tabelle di cuscinetti, spine e accoppiamenti tipici delle macchine automatiche.</p></section>
@@ -73,7 +82,7 @@
 <p>Nel CAD, sotto l'albero, scrivi in una riga cosa è cambiato e premi «Salva versione». Ogni versione mostra le lavorazioni aggiunte, tolte e cambiate e le decisioni prese nel frattempo (chi, cosa, con quale norma o calcolo). Nella pagina Versioni puoi riaprirne una qualsiasi. Il tuo nome per il registro si imposta lì.</p></section>
 
 <section class="carta" style="--c:#e76500"><h2 id="officina">La mia officina</h2>
-<p>Inserisci le macchine con le corse (frese X/Y/Z, torni e rettifiche Ø e lunghezza) e il costo orario, i terzisti con le lavorazioni che fanno, la tariffa e i giorni di consegna, i prezzi di materiali e trattamenti, i costi di banco e attrezzaggio. Se un pezzo non entra in nessuna macchina interna, il ciclo manda la fase al terzista giusto e il preventivo usa la sua tariffa.</p></section>
+<p>Inserisci le macchine con le corse (frese X/Y/Z, torni e rettifiche Ø e lunghezza) e il costo orario, i terzisti con le lavorazioni che fanno, la tariffa e i giorni di consegna, i prezzi di materiali e trattamenti, i costi di banco e attrezzaggio. Se un pezzo non entra in nessuna macchina interna, il ciclo manda la fase al terzista giusto e il preventivo usa la sua tariffa. La <b>precisione</b> di ogni macchina (mm su posizione e forma) serve a capire se le tolleranze geometriche dedotte dagli assiemi si possono fare in casa.</p></section>
 
 <section class="carta" style="--c:#e76500"><h2 id="tavola">Disegno tecnico</h2>
 <p>Tavola A3 con metodo europeo (E): vista frontale, dall'alto, sezione A-A o vista laterale, assonometria, quote d'ingombro, tabella fori con coordinate e limiti di tolleranza, viteria consigliata, note e cartiglio. PDF da stampare, DXF a layer per AutoCAD, SVG. Le quote funzionali aggiuntive e la firma del controllo restano a te.</p></section>

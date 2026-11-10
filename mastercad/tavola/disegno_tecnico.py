@@ -324,7 +324,7 @@ def genera(an, info):
     if an["fori"]:
         t.tx((300, y), "TABELLA FORI (quote dallo zero 0,0)", 3, "start", 0, "testo")
         y -= 3
-        righe = [(str(f["rif"]), _num(f["x"]), _num(f["y"]), descrivi_foro(f, True)) for f in an["fori"]]
+        righe = [(str(f["rif"]), _num(f["x"]), _num(f["y"]), descrivi_foro(f, True) + _lettera_rif(an, f)) for f in an["fori"]]
         if len(righe) > 22:
             righe = [("%d–%d" % (g[0]["rif"], g[-1]["rif"]) if len(g) > 1 else str(g[0]["rif"]), "", "", "%d× %s" % (len(g), descrivi_foro(g[0])))
                      for g in gruppi_fori(an["fori"])]
@@ -356,8 +356,16 @@ def genera(an, info):
             t.tx((302, y), "%d× %s (lunghezza da verificare sul pezzo accoppiato)" % (v["quantita"], v["descrizione"]), 2.3, "start", 0, "testo")
         y -= 6
 
+    gdt = an.get("tolleranze_geometriche") or {}
+    if gdt.get("voci") and y > 78:
+        y = riquadri_gdt(t, gdt, 300, y, 70)
+
     # ── note ──
     note = ["Quote in mm. Tolleranze generali ISO 2768-mK.", "Rugosità generale Ra 3,2 µm.", "Spigoli vivi: smussare 0,2×45° se non indicato."]
+    if gdt.get("voci"):
+        note.insert(1, "Tolleranze geometriche ISO 1101 dedotte dall'assieme «%s» (riferimenti ISO 5459, massimo materiale (M) ISO 2692, campo proiettato (P) ISO 10578); principio di indipendenza ISO 8015." % gdt.get("assieme", ""))
+    for g in gdt.get("in_opera") or []:
+        note.insert(2, "Fori spina Ø%s %s: eseguire preforo Ø%s; alesatura in opera con «%s» al montaggio." % (_num(g["d"]), g["sigla"], _num(g["preforo"]), g["con"]))
     for sp in an["spigoli"]:
         note.append("%s %s×45° sugli spigoli %s." % ("Smussi" if sp["tipo"] == "smusso" else "Raccordi R", _num(sp["valore"]), sp["spigoli"])
                     if sp["tipo"] == "smusso" else "Raccordi R%s sugli spigoli %s." % (_num(sp["valore"]), sp["spigoli"]))
@@ -427,6 +435,93 @@ def genera(an, info):
     return {"primitive": t.prim, "scala": scala_txt, "massa_kg": round(massa, 3), "viti": viti, "note": note,
             "tabella_fori": [{"rif": f["rif"], "x": round(f["x"], 3), "y": round(f["y"], 3), "descrizione": descrivi_foro(f, True)} for f in an["fori"]],
             "sezione": xc is not None or yc is not None}
+
+
+# ── tolleranze geometriche: riquadri disegnati a linee (si vedono uguali in SVG, PDF e DXF) ──
+def _lettera_rif(an, f):
+    for r in (an.get("tolleranze_geometriche") or {}).get("riferimenti") or []:
+        if r.get("tipo") in ("foro", "asse") and r.get("x") is not None and abs(r["x"] - f["x"]) < 0.01 and abs(r["y"] - f["y"]) < 0.01:
+            return " [%s]" % r["lettera"]
+    return ""
+
+
+def _cerchio(cx, cy, r, n=28):
+    return [(cx + r * math.cos(2 * math.pi * k / n), cy + r * math.sin(2 * math.pi * k / n)) for k in range(n + 1)]
+
+
+def simbolo_gdt(t, nome, cx, cy, r=1.7):
+    ly = "testo"
+    if nome == "posizione":
+        t.pl(_cerchio(cx, cy, r * 0.75), ly)
+        t.pl([(cx - r, cy), (cx + r, cy)], ly)
+        t.pl([(cx, cy - r), (cx, cy + r)], ly)
+    elif nome == "planarita":
+        t.pl([(cx - r, cy - r * 0.5), (cx + r * 0.5, cy - r * 0.5), (cx + r, cy + r * 0.5), (cx - r * 0.5, cy + r * 0.5), (cx - r, cy - r * 0.5)], ly)
+    elif nome == "perpendicolarita":
+        t.pl([(cx - r, cy - r * 0.8), (cx + r, cy - r * 0.8)], ly)
+        t.pl([(cx, cy - r * 0.8), (cx, cy + r)], ly)
+    elif nome == "cilindricita":
+        rc = r * 0.55
+        t.pl(_cerchio(cx, cy, rc), ly)
+        ux, uy = math.cos(math.radians(62)), math.sin(math.radians(62))      # due rette parallele tangenti al cerchio
+        for sgn in (-1, 1):
+            px, py = cx + sgn * rc * uy, cy - sgn * rc * ux
+            t.pl([(px - ux * r, py - uy * r), (px + ux * r, py + uy * r)], ly)
+    elif nome == "oscillazione_totale":
+        for dx in (-r * 0.7, r * 0.3):
+            a, b = (cx + dx, cy - r * 0.8), (cx + dx + r * 0.7, cy + r)
+            t.pl([a, b], ly)
+            t.pg([b, (b[0] - 0.9, b[1] - 0.2), (b[0] - 0.3, b[1] - 0.9)], ly)
+        t.pl([(cx - r * 0.7, cy - r * 0.8), (cx + r * 0.3, cy - r * 0.8)], ly)
+    elif nome == "coassialita":
+        t.pl(_cerchio(cx, cy, r * 0.45), ly)
+        t.pl(_cerchio(cx, cy, r * 0.95), ly)
+
+
+def riquadri_gdt(t, gdt, x0, y, y_min):
+    """Elenco dei riquadri di tolleranza: simbolo | valore e modificatori | riferimenti, più l'elemento e il perché in breve."""
+    import textwrap
+    t.tx((x0, y), "TOLLERANZE GEOMETRICHE (ISO 1101) — dedotte dall'assieme", 3, "start", 0, "testo")
+    y -= 2.5
+    rif = gdt.get("riferimenti") or []
+    if rif:
+        for riga in textwrap.wrap("Riferimenti: " + "; ".join("%s = %s" % (r["lettera"], r["elemento"]) for r in rif), 70)[:3]:
+            y -= 3.6
+            t.tx((x0, y), riga, 2.2, "start", 0, "testo")
+    y -= 2
+    h = 5.0
+    voci = gdt.get("voci") or []
+    for k, v in enumerate(voci):
+        if y - h < y_min:
+            t.tx((x0, y - 3), "… altre %d tolleranze nel piano di controllo" % (len(voci) - k), 2.2, "start", 0, "testo")
+            y -= 5
+            break
+        yt, yb = y, y - h
+        x = x0
+        t.rett(x, yb, x + 6, yt, "testo")
+        simbolo_gdt(t, v["simbolo"], x + 3, (yt + yb) / 2)
+        x += 6
+        val = ("Ø" if v.get("diametrale") else "") + ("%.3f" % float(v["valore"])).rstrip("0").rstrip(".").replace(".", ",")
+        mods = v.get("modificatori") or []
+        larg = 3 + len(val) * 1.65 + (4 if mods else 0) + (len(_num(mods[1])) * 1.4 + 1 if len(mods) > 1 else 0)
+        t.rett(x, yb, x + larg, yt, "testo")
+        t.tx((x + 1.2, yb + 1.4), val, 2.6, "start", 0, "testo")
+        if mods:
+            mx = x + 1.6 + len(val) * 1.65 + 1.4
+            t.pl(_cerchio(mx, (yt + yb) / 2, 1.5), "testo")
+            t.tx((mx, yb + 1.6), mods[0], 2.0, "middle", 0, "testo")
+            if len(mods) > 1:
+                t.tx((mx + 2, yb + 1.4), _num(mods[1]), 2.3, "start", 0, "testo")
+        x += larg
+        for lett in v.get("riferimenti") or []:
+            t.rett(x, yb, x + 5, yt, "testo")
+            t.tx((x + 2.5, yb + 1.4), lett, 2.6, "middle", 0, "testo")
+            x += 5
+        righe = textwrap.wrap(v.get("elemento", ""), max(14, int((418 - 12 - x - 2) / 1.25)))[:1]
+        for riga in righe:
+            t.tx((x + 2, yb + 1.5), riga, 2.2, "start", 0, "testo")
+        y -= h + 1.2
+    return y - 4
 
 
 # ── scrittori ──

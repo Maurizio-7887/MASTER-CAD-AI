@@ -4,9 +4,9 @@
   var C = JSON.parse($('cataloghi').textContent), O = null;
   var num = function (v) { return v == null ? '' : v; };
   function rendi() {
-    $('t-mac').innerHTML = '<tr><th>Nome</th><th>Tipo</th><th>X</th><th>Y</th><th>Z</th><th>Ø max</th><th>Lungh.</th><th>€/ora</th><th>Attiva</th><th></th></tr>' + O.macchine.map(function (m, i) {
+    $('t-mac').innerHTML = '<tr><th>Nome</th><th>Tipo</th><th>X</th><th>Y</th><th>Z</th><th>Ø max</th><th>Lungh.</th><th title="Precisione che la macchina garantisce su posizione e forma (mm)">Precis. mm</th><th>€/ora</th><th>Attiva</th><th></th></tr>' + O.macchine.map(function (m, i) {
       return '<tr><td><input data-m="' + i + '" data-k="nome" value="' + MC.esc(m.nome) + '"></td><td><select data-m="' + i + '" data-k="tipo">' + Object.keys(C.tipi).map(function (k) { return '<option value="' + k + '"' + (m.tipo === k ? ' selected' : '') + '>' + MC.esc(C.tipi[k]) + '</option>'; }).join('') + '</select></td>' +
-        ['x', 'y', 'z', 'diametro', 'lunghezza', 'costo_ora'].map(function (k) { return '<td><input class="n" type="number" data-m="' + i + '" data-k="' + k + '" value="' + num(m[k]) + '"></td>'; }).join('') +
+        ['x', 'y', 'z', 'diametro', 'lunghezza', 'precisione', 'costo_ora'].map(function (k) { return '<td><input class="n" type="number" data-m="' + i + '" data-k="' + k + '"' + (k === 'precisione' ? ' step="0.001"' : '') + ' value="' + num(m[k]) + '"></td>'; }).join('') +
         '<td><input type="checkbox" style="width:auto" data-m="' + i + '" data-k="attiva"' + (m.attiva !== false ? ' checked' : '') + '></td><td><button class="btn sec" data-delm="' + i + '">✕</button></td></tr>';
     }).join('');
     $('t-ter').innerHTML = '<tr><th>Nome</th><th>Lavorazioni</th><th>€/ora</th><th>Giorni</th><th></th></tr>' + O.terzisti.map(function (t, i) {
@@ -32,7 +32,7 @@
     document.querySelectorAll('[data-mat]').forEach(function (x) { if (x.value !== '') O.materiali[x.getAttribute('data-mat')] = {euro_kg: Number(x.value)}; });
     document.querySelectorAll('[data-tr]').forEach(function (x) { if (x.value !== '') O.trattamenti[x.getAttribute('data-tr')] = {euro_kg: Number(x.value)}; });
     document.querySelectorAll('[data-c]').forEach(function (x) { O.costi[x.getAttribute('data-c')] = Number(x.value || 0); });
-    O.macchine.forEach(function (m) { ['x', 'y', 'z', 'diametro', 'lunghezza'].forEach(function (k) { if (m[k] == null) delete m[k]; }); });
+    O.macchine.forEach(function (m) { ['x', 'y', 'z', 'diametro', 'lunghezza', 'precisione'].forEach(function (k) { if (m[k] == null) delete m[k]; }); });
   }
   $('add-mac').onclick = function () { leggiForm(); O.macchine.push({nome: 'Nuova macchina', tipo: 'fresa', x: 600, y: 400, z: 400, costo_ora: 50, attiva: true}); rendi(); };
   $('add-ter').onclick = function () { leggiForm(); O.terzisti.push({nome: 'Nuovo terzista', lavorazioni: [], costo_ora: 60, giorni: 7}); rendi(); };
