@@ -26,6 +26,8 @@ from mastercad.versioni import bp as versioni_bp, init_db as versioni_init_db
 from mastercad.tolleranze import bp as tolleranze_bp
 from mastercad.generativo import bp as generativo_bp
 from mastercad.assiemi import bp as assiemi_bp, init_db as assiemi_init_db
+from mastercad.utenti import bp as utenti_bp, init_db as utenti_init_db, verifica as verifica_utente, bloccato, errore as errore_login
+from mastercad.segnalazioni import bp as segnalazioni_bp, init_db as segnalazioni_init_db
 
 app=Flask(__name__)
 app.config.update(SECRET_KEY=os.getenv("FLASK_SECRET_KEY") or secrets.token_urlsafe(48),
@@ -38,17 +40,19 @@ app.register_blueprint(disegno_bp)
 app.register_blueprint(reverse_bp)
 app.register_blueprint(progetto_bp)
 for _bp in (home_bp, tavola_bp, ciclo_bp, preventivo_bp, fattibilita_bp, libreria_bp, ar_bp, qualita_bp, corso_bp,
-            officina_bp, versioni_bp, tolleranze_bp, generativo_bp, assiemi_bp):
+            officina_bp, versioni_bp, tolleranze_bp, generativo_bp, assiemi_bp, utenti_bp, segnalazioni_bp):
     app.register_blueprint(_bp)
 # pagine aperte senza login: accesso, salute, vista AR condivisa con il QR, montaggio guidato (link segreto), ingresso allievi
 PUBBLICHE=("/health","/login","/corso/entra")
 PUBBLICHE_PREFISSI=("/ar/v/","/ar/static/","/home/static/","/corso/static/","/assiemi/m/")
 # l'allievo usa il CAD e gli strumenti, ma non il pannello docente né l'elenco di tutti i progetti
-VIETATE_ALLIEVO=("/corso/docente","/api/corso/docente","/api/projects")
+VIETATE_ALLIEVO=("/corso/docente","/api/corso/docente","/api/projects","/utenti","/api/utenti","/segnalazioni","/api/segnalazioni")
+# al primo accesso con la password temporanea si può solo cambiarla
+CONSENTITE_CAMBIO=("/cambia-password","/logout","/home/static/")
 _LOCK=threading.Lock()
 LOGIN="""<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MASTER CAD AI · Accesso</title>
 <style>body{background:#0b1424;color:#e5f2ff;display:grid;place-items:center;min-height:100vh;font:16px system-ui}main{background:#15253b;border:1px solid #36546d;border-radius:16px;padding:30px;width:min(400px,85vw)}input,button{width:100%;box-sizing:border-box;padding:14px;margin-top:12px;border-radius:8px;font:inherit}input{background:#101a2b;color:white;border:1px solid #658099}button{background:#208aad;color:white;border:0;cursor:pointer}.err{color:#ffb0b0}</style></head><body><main><h1>MASTER CAD AI</h1><p>CAD 3D da voce e descrizioni in italiano</p>
-{% if error %}<p class="err">{{error}}</p>{% endif %}<form method="post" action="/login"><label>Password del servizio<input type="password" name="password" required autocomplete="current-password"></label><button>Accedi</button></form><p style="font-size:13px"><a style="color:#9fd8f0" href="/corso/entra">Sei un allievo? Entra con il codice del corso →</a></p><p style="font-size:12px">Configura MASTER_CAD_PASSWORD nelle Variables di Railway.</p></main></body></html>"""
+{% if error %}<p class="err">{{error}}</p>{% endif %}<form method="post" action="/login"><label>Utente<input name="utente" autocomplete="username" placeholder="es. luca — vuoto per l'amministratore" autocapitalize="none"></label><label>Password<input type="password" name="password" required autocomplete="current-password"></label><button>Accedi</button></form><p style="font-size:13px"><a style="color:#9fd8f0" href="/corso/entra">Sei un allievo? Entra con il codice del corso →</a></p><p style="font-size:12px">Password dimenticata? Chiedi all'amministratore una password nuova.</p></main></body></html>"""
 
 @app.before_request
 def auth():
@@ -58,12 +62,15 @@ def auth():
         if request.path.startswith(VIETATE_ALLIEVO):
             if request.path.startswith("/api/"): return jsonify(error="Riservato al docente"),403
             return redirect("/")
-    elif not os.getenv("MASTER_CAD_PASSWORD") or not session.get("ok"):
+    elif not session.get("ok") or (not session.get("utente",{}).get("username") and not os.getenv("MASTER_CAD_PASSWORD")):
         if request.path.startswith("/api/"): return jsonify(error="Accesso richiesto"),401
         return redirect("/login")
+    elif session.get("utente",{}).get("deve_cambiare") and not request.path.startswith(CONSENTITE_CAMBIO):
+        if request.path.startswith("/api/"): return jsonify(error="Cambia prima la password temporanea"),403
+        return redirect("/cambia-password")
     if request.method not in ("GET","HEAD","OPTIONS"):
         expected=session.get("csrf","")
-        supplied=request.headers.get("X-CSRF-Token","")
+        supplied=request.headers.get("X-CSRF-Token","") or (request.form.get("csrf","") if request.mimetype=="application/x-www-form-urlencoded" else "")
         if not expected or not secrets.compare_digest(supplied,expected):
             return jsonify(error="Token di sicurezza non valido"),403
 
@@ -83,14 +90,25 @@ def health():
 def login():
     if request.method=="GET":
         return render_template_string(LOGIN,error="Sessione scaduta: accedi nuovamente" if request.args.get("expired")=="1" else None)
-    password=os.getenv("MASTER_CAD_PASSWORD","")
-    if password and secrets.compare_digest(request.form.get("password",""),password):
+    ip=(request.headers.get("X-Forwarded-For","").split(",")[0].strip() or request.remote_addr or "?")
+    if bloccato(ip):
+        return render_template_string(LOGIN,error="Troppi tentativi sbagliati: riprova fra 10 minuti"),429
+    nome_utente=request.form.get("utente","").strip().lower()
+    if nome_utente:
+        u=verifica_utente(nome_utente,request.form.get("password",""))
+    else:
+        password=os.getenv("MASTER_CAD_PASSWORD","")
+        u={"username":"admin","nome":os.getenv("MASTER_CAD_ADMIN_NOME","Maurizio"),"ruolo":"admin","deve_cambiare":False} \
+            if password and secrets.compare_digest(request.form.get("password",""),password) else None
+    if u:
         session.clear()
         session["ok"]=True
+        session["utente"]=u
         session.permanent=True
         session["csrf"]=secrets.token_urlsafe(32)
-        return redirect("/")
-    return render_template_string(LOGIN,error="Password errata o non configurata"),401
+        return redirect("/cambia-password" if u["deve_cambiare"] else "/")
+    errore_login(ip)
+    return render_template_string(LOGIN,error="Utente o password errati"),401
 
 @app.post("/logout")
 def logout():
@@ -217,3 +235,5 @@ corso_init_db()
 officina_init_db()
 versioni_init_db()
 assiemi_init_db()
+utenti_init_db()
+segnalazioni_init_db()

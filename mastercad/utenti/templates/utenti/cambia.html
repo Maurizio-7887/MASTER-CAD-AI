@@ -1,0 +1,19 @@
+{% extends "home/base.html" %}
+{% set aiuto = 'utenti' %}
+{% block titolo %}Cambia password · MASTER CAD AI{% endblock %}
+{% block barra %}La tua password{% endblock %}
+{% block contenuto %}
+<section class="carta" style="max-width:520px;margin:20px auto">
+  <h1>Ciao {{ u.nome }}!</h1>
+  {% if u.deve_cambiare %}<p class="sotto">È il primo accesso: scegli una password tua. Quella temporanea da ora non vale più.</p>{% else %}<p class="sotto">Cambia la tua password.</p>{% endif %}
+  {% if errore %}<p class="messaggio err">{{ errore }}</p>{% endif %}
+  <form method="post" action="/cambia-password">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>Password attuale<input type="password" name="attuale" required autocomplete="current-password"></label>
+    <label>Nuova password<input type="password" name="nuova" required minlength="10" autocomplete="new-password"></label>
+    <label>Ripeti la nuova password<input type="password" name="ripeti" required minlength="10" autocomplete="new-password"></label>
+    <p class="sotto" style="font-size:12.5px;margin-top:8px">Almeno 10 caratteri, con maiuscole, minuscole e un numero.</p>
+    <div class="azioni"><button class="btn">Salva la password</button></div>
+  </form>
+</section>
+{% endblock %}

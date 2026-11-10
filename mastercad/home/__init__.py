@@ -28,8 +28,9 @@ GRUPPI = [
         ("/qualita", "qualita", "Controllo qualità foto", "Foto del pezzo prodotto confrontata con il progetto, con verbale", "qualita", False),
         ("/ar", "cubo", "Pezzo in realtà aumentata", "Inquadra il QR col telefono: il pezzo sul tavolo a grandezza reale", "ar", False),
     ]),
-    ("5 · Aiuto", "Il manuale dentro il programma: in ogni pagina il «?» porta alla spiegazione giusta.", "#556b82", [
+    ("5 · Aiuto e sviluppo", "Il manuale dentro il programma e il filo diretto con chi lo sviluppa: in ogni pagina «?» e «💡 Suggerisci».", "#556b82", [
         ("/manuale", "aiuto", "Manuale d'uso", "Come si lavora, passo per passo, con esempi di indicazioni da scrivere", None, False),
+        ("/segnalazioni", "idea", "Suggerimenti e segnalazioni", "Cosa manca, cosa non va, calcoli da correggere: lo sviluppo parte da qui", None, True),
     ]),
 ]
 

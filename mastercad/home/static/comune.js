@@ -70,4 +70,42 @@
   window.MC = MC;
   var b = document.getElementById('esci');
   if (b) b.onclick = MC.esci;
+  // «💡 Suggerisci»: da ogni pagina, con la pagina in cui sei e (se vuoi) il pezzo aperto e una schermata
+  MC.suggerisci = function (dopo) {
+    var d = document.getElementById('dlg-sugg');
+    if (!d) {
+      d = document.createElement('dialog'); d.id = 'dlg-sugg'; d.className = 'dialogo';
+      d.innerHTML = '<form method="dialog" id="f-sugg"><h2>💡 Aiutaci a migliorare il programma</h2>' +
+        '<p class="sotto" style="margin:0 0 6px">Scrivi come lo diresti in officina: cosa volevi fare, cosa è successo, cosa ti aspettavi.</p>' +
+        '<label>Tipo<select name="tipo"><option value="idea">Idea / funzione che manca</option><option value="errore">Qualcosa non funziona</option><option value="calcolo">Calcolo o norma da correggere</option><option value="domanda">Non si capisce come fare</option></select></label>' +
+        '<label>Cosa vuoi dirci<textarea name="testo" rows="6" required minlength="5" placeholder="Es. nelle macchine automatiche usiamo spesso spine con foro filettato di estrazione: servirebbero…"></textarea></label>' +
+        '<label style="display:flex;gap:8px;align-items:center;color:inherit"><input type="checkbox" name="con_pezzo" style="width:auto" checked> Allega il pezzo aperto (serve a rifare il caso)</label>' +
+        '<label>Foto o schermata (facoltativa, PNG/JPEG)<input type="file" name="immagine" accept="image/png,image/jpeg"></label>' +
+        '<p class="messaggio" id="sugg-msg" hidden></p><div class="azioni"><button class="btn" value="invia" id="sugg-invia">Invia</button><button class="btn sec" value="annulla" formnovalidate>Annulla</button></div></form>';
+      document.body.appendChild(d);
+      d.querySelector('#sugg-invia').onclick = async function (ev) {
+        ev.preventDefault();
+        var f = d.querySelector('#f-sugg'), fd = new FormData();
+        if (!f.reportValidity()) return;
+        fd.append('tipo', f.tipo.value); fd.append('testo', f.testo.value); fd.append('pagina', location.pathname + location.hash);
+        var p = MC.progetto(); if (f.con_pezzo.checked && p) fd.append('progetto', JSON.stringify(p));
+        if (f.immagine.files[0]) fd.append('immagine', f.immagine.files[0]);
+        MC.occupato(this, true, 'Invio…');
+        try { var r = await MC.api('/api/segnalazioni', fd); f.reset(); d.close(); MC.avviso(r.messaggio); if (d._dopo) d._dopo(); }
+        catch (e) { MC.messaggio(d.querySelector('#sugg-msg'), e.message, 'err'); }
+        finally { MC.occupato(this, false); }
+      };
+    }
+    d._dopo = typeof dopo === 'function' ? dopo : null;
+    d.showModal();
+  };
+  MC.avviso = MC.avviso || function (t) {
+    var x = document.createElement('div'); x.className = 'toast'; x.textContent = t; document.body.appendChild(x);
+    setTimeout(function () { x.remove(); }, 4000);
+  };
+  var sg = document.getElementById('suggerisci');
+  if (sg) sg.onclick = function () { MC.suggerisci(); };
+  // il nome di chi è entrato firma le decisioni nel registro e le versioni
+  var chi = document.body.getAttribute('data-utente');
+  if (chi) scriviLocale('mcad-utente', chi);
 })();
