@@ -1,0 +1,11 @@
+{% extends "home/base.html" %}
+{% block titolo %}I miei esercizi · MASTER CAD AI{% endblock %}
+{% block barra %}I miei esercizi{% endblock %}
+{% block testa %}<style>.es{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}.es img{width:100%;max-height:220px;object-fit:contain;background:#f5f6f7;border-radius:8px}.es pre{white-space:pre-wrap;font:inherit;margin:6px 0;background:#f5f6f7;border-radius:8px;padding:8px 10px}</style>{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>I miei esercizi · {{ allievo.corso }}</h1>
+<p class="sotto">Per ogni esercizio: leggi la consegna, guarda la foto e le indicazioni del tecnico, poi premi «Lavora nel CAD». Quando il pezzo è pronto, nel CAD premi «Consegna»: il voto automatico arriva subito, quello del docente dopo.</p></div></div>
+<div id="msg" class="messaggio" hidden></div>
+<div class="es" id="esercizi"><div class="vuoto-stato">Carico gli esercizi…</div></div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('corso.static', filename='allievo.js') }}"></script>{% endblock %}

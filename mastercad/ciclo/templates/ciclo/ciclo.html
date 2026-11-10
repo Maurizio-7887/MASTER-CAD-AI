@@ -1,0 +1,25 @@
+{% extends "home/base.html" %}
+{% block titolo %}Ciclo di lavoro · MASTER CAD AI{% endblock %}
+{% block barra %}Ciclo di lavoro e CNC{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Ciclo di lavoro e programma CNC</h1>
+<p class="sotto">Le fasi in ordine di officina, gli utensili, i giri e gli avanzamenti calcolati dal materiale, i tempi di ogni operazione e il programma ISO (Fanuc/Haas) per il centro di lavoro.</p></div></div>
+<div id="pezzo"></div>
+<div id="corpo" hidden>
+  <section class="carta">
+    <div class="due" style="max-width:640px"><div><label for="c-mat">Materiale</label><select id="c-mat">{% for m in materiali %}<option value="{{ m.codice }}">{{ m.nome }}</option>{% endfor %}</select></div>
+      <div style="display:flex;align-items:flex-end"><button class="btn" id="calcola" style="width:100%">Calcola il ciclo</button></div></div>
+    <div id="msg" class="messaggio" hidden></div>
+    <div id="kpi" class="kpi-riga"></div>
+  </section>
+  <section class="carta" id="fasi" hidden><h2>Fasi e operazioni</h2><div class="scorri"><table class="dati" id="t-fasi"></table></div></section>
+  <div class="griglia" id="sotto" hidden style="grid-template-columns:minmax(280px,420px) 1fr">
+    <section class="carta"><h2>Utensili</h2><table class="dati" id="t-ut"></table></section>
+    <section class="carta"><h2>Programma CNC · fase 20</h2>
+      <div class="aiuto">Zero pezzo <b>G54</b>: X0 Y0 = origine del disegno, Z0 = faccia superiore finita. È un programma di partenza: <b>simulalo</b> sul controllo o nel CAM e verifica correttori e attrezzature prima di lavorare.</div>
+      <div class="azioni"><button class="btn" id="scarica-nc">Scarica programma .nc</button></div>
+      <pre class="codice" id="gcode"></pre></section>
+  </div>
+</div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('ciclo.static', filename='ciclo.js') }}"></script>{% endblock %}

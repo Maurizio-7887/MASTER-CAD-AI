@@ -1,0 +1,29 @@
+{% extends "home/base.html" %}
+{% block titolo %}Controllo qualità · MASTER CAD AI{% endblock %}
+{% block barra %}Controllo qualità con foto{% endblock %}
+{% block testa %}<style>#sovrapposizione svg{max-height:420px;border:1px solid var(--bordo);border-radius:8px}.legenda span{display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:12.5px}.legenda i{width:18px;height:0;border-top:3px solid}</style>{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Controllo qualità con la foto</h1>
+<p class="sotto">Fotografa il pezzo appena prodotto, appoggiato su un foglio A4 e ripreso dall'alto: il programma lo confronta con il progetto, segna in rosso i fori spostati, mancanti o di diametro sbagliato e scrive il verbale.</p></div></div>
+<div id="pezzo"></div>
+<div class="griglia" id="corpo" hidden>
+  <div class="no-stampa">
+    <section class="carta">
+      <h2>Foto del pezzo prodotto</h2>
+      <label for="q-foto">Foto (dall'alto, perpendicolare, su foglio A4 bianco)</label><input id="q-foto" type="file" accept="image/jpeg,image/png,image/webp">
+      <label for="q-rif">Riferimento per la scala</label><select id="q-rif"><option value="a4">Foglio A4 (più preciso)</option><option value="misura">Una misura vera del pezzo</option></select>
+      <div id="q-misura-box" class="due" hidden><div><label for="q-misura">Misura (mm)</label><input id="q-misura" type="number" step="0.01"></div>
+        <div><label for="q-misura-di">È la</label><select id="q-misura-di"><option value="larghezza">larghezza</option><option value="altezza">altezza</option></select></div></div>
+      <div class="due"><div><label for="q-lotto">Lotto / ordine</label><input id="q-lotto" maxlength="60"></div><div><label for="q-op">Operatore</label><input id="q-op" maxlength="60"></div></div>
+      <details style="margin-top:10px"><summary>Tolleranze del controllo</summary>
+        <div class="due"><div><label for="q-tpos">Posizione fori ± mm</label><input id="q-tpos" type="number" step="0.1" value="0.5"></div><div><label for="q-td">Diametro fori ± mm</label><input id="q-td" type="number" step="0.1" value="0.4"></div></div>
+        <label for="q-ting">Ingombri ± mm</label><input id="q-ting" type="number" step="0.1" value="0.8"></details>
+      <div class="azioni"><button class="btn" id="controlla">Controlla il pezzo</button></div>
+      <div id="msg" class="messaggio" hidden></div>
+    </section>
+    <section class="carta"><h2>Ultimi controlli</h2><div class="scorri"><table class="dati" id="storico"></table></div></section>
+  </div>
+  <section class="carta" id="verbale"><div class="vuoto-stato">Carica la foto e premi «Controlla il pezzo».</div></section>
+</div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('qualita.static', filename='qualita.js') }}"></script>{% endblock %}

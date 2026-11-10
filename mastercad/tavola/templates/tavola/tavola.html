@@ -1,0 +1,34 @@
+{% extends "home/base.html" %}
+{% block titolo %}Disegno tecnico · MASTER CAD AI{% endblock %}
+{% block barra %}Disegno tecnico{% endblock %}
+{% block testa %}<style>#foglio{background:#fff;border:1px solid var(--bordo);border-radius:8px;overflow:hidden}#foglio svg{display:block;width:100%;height:auto}</style>{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Disegno tecnico per l'officina</h1>
+<p class="sotto">Tavola A3 generata dal modello 3D: viste con metodo europeo (E), linee nascoste, sezione A-A sui fori, quote d'ingombro, tabella fori con le coordinate, viteria e cartiglio. Si scarica in PDF da stampare e in DXF da aprire in AutoCAD.</p></div></div>
+<div id="pezzo"></div>
+<div class="griglia" id="corpo" hidden>
+  <div>
+    <section class="carta">
+      <h2>Cartiglio</h2>
+      <label for="t-nome">Denominazione</label><input id="t-nome" maxlength="60">
+      <div class="due"><div><label for="t-num">N. disegno</label><input id="t-num" maxlength="30" placeholder="automatico"></div>
+        <div><label for="t-rev">Revisione</label><input id="t-rev" maxlength="5" value="0"></div></div>
+      <label for="t-mat">Materiale</label><select id="t-mat">{% for m in materiali %}<option value="{{ m.codice }}">{{ m.nome }}</option>{% endfor %}</select>
+      <label for="t-tr">Trattamento</label><select id="t-tr">{% for t in trattamenti %}<option value="{{ t.codice }}">{{ t.nome }}</option>{% endfor %}</select>
+      <div class="due"><div><label for="t-dis">Disegnato</label><input id="t-dis" maxlength="40"></div>
+        <div><label for="t-con">Controllato</label><input id="t-con" maxlength="40"></div></div>
+      <div class="azioni"><button class="btn" id="genera">Genera la tavola</button></div>
+      <div id="msg" class="messaggio" hidden></div>
+    </section>
+    <section class="carta" id="scarica" hidden>
+      <h2>Scarica</h2>
+      <div class="azioni"><button class="btn" data-fmt="pdf">PDF da stampare</button><button class="btn sec" data-fmt="dxf">DXF per AutoCAD</button><button class="btn sec" data-fmt="svg">SVG</button></div>
+      <p class="sotto" style="margin-top:10px;font-size:12.5px">Il DXF ha i layer separati: VISIBILI, NASCOSTE, ASSI, QUOTE, SEZIONE, TESTI, CORNICE.</p>
+      <div id="riepilogo"></div>
+    </section>
+    <div class="aiuto"><b>Da controllare sempre a mano</b><ol><li>Tolleranze degli accoppiamenti (H7/g6…) e rugosità delle superfici funzionali.</li><li>Quote funzionali in più rispetto a ingombri e tabella fori.</li><li>Firma del controllo prima di mandarla in produzione.</li></ol></div>
+  </div>
+  <section class="carta"><div id="foglio"><div class="vuoto-stato">Premi «Genera la tavola»: ci vogliono pochi secondi.</div></div></section>
+</div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('tavola.static', filename='tavola.js') }}"></script>{% endblock %}

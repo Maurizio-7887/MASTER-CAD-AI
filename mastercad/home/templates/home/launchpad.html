@@ -1,0 +1,40 @@
+{% extends "home/base.html" %}
+{% from "home/_icone.html" import icona %}
+{% set home = True %}
+{% block titolo %}MASTER CAD AI · Home{% endblock %}
+{% block barra %}Home{% endblock %}
+{% block contenuto %}
+<h1>{% if allievo %}Ciao {{ allievo.nome.split()[0] }}, benvenuto nel corso «{{ allievo.corso }}»{% else %}Dal pezzo vero al pezzo prodotto{% endif %}</h1>
+<p class="sotto">{% if allievo %}Apri «I miei esercizi»: trovi la consegna, la foto e le indicazioni. Poi lavora nel Disegno CAD e consegna.{% else %}Ogni riquadro è un'attività. Si lavora da sinistra a destra: si crea il pezzo, si prepara l'officina, si vende e si controlla.{% endif %}</p>
+
+<section class="percorso" aria-label="Come si lavora">
+  <div class="passo"><span class="n">1</span><b>Parti dal pezzo</b><p>Foto su foglio A4, disegno o pezzo a norma dalla libreria.</p></div>
+  <div class="passo"><span class="n">2</span><b>Indicazioni del tecnico</b><p>«spessore 15, 4 fori M8 su interasse 70…»: il pezzo si completa da solo.</p></div>
+  <div class="passo"><span class="n">3</span><b>Verifica</b><p>Il controllo di fattibilità trova pareti sottili, fori al bordo, filetti sbagliati.</p></div>
+  <div class="passo"><span class="n">4</span><b>Officina</b><p>Disegno tecnico, ciclo di lavoro e programma CNC.</p></div>
+  <div class="passo"><span class="n">5</span><b>Prezzo e controllo</b><p>Preventivo al cliente, controllo del pezzo con la foto, AR.</p></div>
+</section>
+
+<div id="pezzo"></div>
+
+{% for nome, desc, tiles in gruppi %}
+<section class="gruppo">
+  <h2>{{ nome }} <small>{{ desc }}</small></h2>
+  <div class="tiles">
+  {% for url, ic, titolo, sottotitolo, kpi, solo_docente in tiles %}
+    <a class="tile" href="{{ url }}" data-kpi="{{ kpi or '' }}">
+      <span class="t">{{ titolo }}</span>
+      <span class="s">{{ sottotitolo }}</span>
+      <span class="piede">{{ icona(ic) }}<span class="kpi"></span></span>
+    </a>
+  {% endfor %}
+  </div>
+</section>
+{% endfor %}
+{% if not allievo %}
+<p class="sotto" style="font-size:12.5px">Gli allievi entrano da <b>{{ request.host_url }}corso/entra</b> con il codice del corso che crei nel Pannello docente.</p>
+{% endif %}
+{% endblock %}
+{% block script %}
+<script src="{{ url_for('home.static', filename='launchpad.js') }}"></script>
+{% endblock %}

@@ -75,7 +75,7 @@ class CADTests(unittest.TestCase):
             self.assertEqual(c.get("/api/status").status_code,401)
             self.assertEqual(c.post("/login",data={"password":"wrong"}).status_code,401)
             self.assertEqual(c.post("/login",data={"password":"test-password"}).status_code,302)
-            page=c.get("/")
+            page=c.get("/parla")
             self.assertEqual(page.status_code,200)
             self.assertIn(b"MASTER",page.data)
             self.assertNotIn(b"/*__CSRF__*/",page.data)
