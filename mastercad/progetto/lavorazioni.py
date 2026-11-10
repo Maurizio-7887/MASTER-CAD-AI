@@ -290,7 +290,9 @@ def esegui(solido, lav):
         nome = "Raccordo R" if tipo == "raccordo" else "Smusso"
         try:
             nuovo = (wp.fillet(v) if tipo == "raccordo" else wp.chamfer(v)).val()
-            return nuovo, "%s %g sugli spigoli %s" % (nome, v, lav.get("spigoli", "verticali"))
+            if nuovo.isValid():
+                return nuovo, "%s %g sugli spigoli %s" % (nome, v, lav.get("spigoli", "verticali"))
+            # risultato non valido (spigoli molto corti, contorni da ottimizzazione): si passa a uno spigolo alla volta
         except Exception:
             pass
         # tutti insieme non riesce (spigolo troppo corto, parete sottile): uno alla volta, saltando quelli impossibili

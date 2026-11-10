@@ -9,13 +9,13 @@ from flask import Blueprint, current_app, jsonify, render_template, request, ses
 
 from ..ciclo import motore
 from ..materiali import TRATTAMENTI, elenco as elenco_materiali, materiale as dati_materiale
+from ..officina import leggi as leggi_officina
 from ..progetto.analisi import analizza
 
 bp = Blueprint("preventivo", __name__, template_folder="templates", static_folder="static", static_url_path="/preventivo/static")
 _LOCK = threading.Lock()
 
-DEFAULT = {"costo_cnc": 55.0, "costo_tornio": 45.0, "costo_banco": 32.0, "costo_attrezzaggio": 45.0,
-           "margine": 25.0, "scarto": 3.0, "quantita": [1, 10, 50, 100]}
+DEFAULT = {"costo_attrezzaggio": 45.0, "margine": 25.0, "scarto": 3.0, "quantita": [1, 10, 50, 100]}
 
 
 def _f(v, nome, minimo=0.0, massimo=1e6):
@@ -37,8 +37,6 @@ def calcola(an, ciclo, parametri):
     if p.get("trattamento") == "anodizzazione" and ciclo["codice_materiale"] != "AL6082":
         raise ValueError("L'anodizzazione si fa solo sull'alluminio")
     euro_kg = _f(p.get("euro_kg") or m["euro_kg"], "Prezzo del materiale", 0.01, 500)
-    costo_macchina = _f(p["costo_tornio"] if ciclo["tempi"]["tornito"] else p["costo_cnc"], "Costo macchina", 1, 1000)
-    costo_banco = _f(p["costo_banco"], "Costo banco", 1, 1000)
     costo_att = _f(p["costo_attrezzaggio"], "Costo attrezzaggio", 1, 1000)
     margine = _f(p["margine"], "Margine", 0, 300) / 100
     scarto = _f(p["scarto"], "Scarto", 0, 50) / 100
@@ -47,12 +45,13 @@ def calcola(an, ciclo, parametri):
     kg_finito = an["volume"] / 1e6 * m["densita"]
     mat = kg_grezzo * euro_kg
     t_mac, t_banco, t_att = ciclo["tempi"]["macchina_min"], ciclo["tempi"]["banco_min"], ciclo["tempi"]["attrezzaggio_min"]
-    lav = t_mac / 60 * costo_macchina + t_banco / 60 * costo_banco
-    tr = kg_finito * tratt["euro_kg"]
+    # ogni fase con la tariffa della sua macchina (o del terzista) presa dall'officina
+    lav = sum(sum(o["tempo"] for o in f["operazioni"]) / 60 * float(f.get("costo_ora") or 50) for f in ciclo["fasi"])
+    tr = kg_finito * float(p.get("euro_kg_trattamento") if p.get("euro_kg_trattamento") is not None else tratt["euro_kg"])
     righe = []
     for q in qta:
         # lotti grandi: il tempo macchina cala (programma rodato, carico/scarico ottimizzato), fino al −20%
-        fattore = 1.0 if q < 10 else 0.92 if q < 50 else 0.85 if q < 200 else 0.80
+        fattore = 1.0 if q < 10 else 0.92 if q < 50 else 0.85 if q < 200 else 0.80     # solo sul tempo, non sul materiale
         att = t_att / 60 * costo_att / q
         costo = (mat + lav * fattore + tr) * (1 + scarto) + att
         prezzo = costo * (1 + margine)
@@ -60,10 +59,11 @@ def calcola(an, ciclo, parametri):
                       "attrezzaggio": round(att, 2), "costo": round(costo, 2), "prezzo": round(prezzo, 2), "totale": round(prezzo * q, 2)})
     return {"materiale": m["nome"], "euro_kg": euro_kg, "grezzo": ciclo["grezzo"]["descrizione"],
             "kg_grezzo": round(kg_grezzo, 3), "kg_finito": round(kg_finito, 3), "trattamento": tratt["nome"],
-            "tempi": ciclo["tempi"], "costo_macchina": costo_macchina, "margine": margine * 100, "scarto": scarto * 100,
+            "tempi": ciclo["tempi"], "margine": margine * 100, "scarto": scarto * 100, "terzisti": ciclo.get("terzisti", []),
             "righe": righe,
-            "voci_ciclo": [{"fase": f["n"], "nome": f["nome"], "macchina": f["macchina"],
-                            "minuti": round(sum(o["tempo"] for o in f["operazioni"]), 2)} for f in ciclo["fasi"]]}
+            "voci_ciclo": [{"fase": f["n"], "nome": f["nome"], "macchina": f["macchina"], "costo_ora": f.get("costo_ora"),
+                            "minuti": round(sum(o["tempo"] for o in f["operazioni"]), 2),
+                            "euro": round(sum(o["tempo"] for o in f["operazioni"]) / 60 * float(f.get("costo_ora") or 50), 2)} for f in ciclo["fasi"]]}
 
 
 @bp.get("/preventivo")
@@ -80,8 +80,17 @@ def api():
     try:
         with _LOCK:
             an = analizza(dati.get("progetto"))
-            c = motore.calcola(an, dati.get("materiale") or "S235")
-        return jsonify(preventivo=calcola(an, c, dati.get("parametri") or {}), saltate=an["saltate"],
+            off = leggi_officina()
+            c = motore.calcola(an, dati.get("materiale") or "S235", off)
+        par = {k: v for k, v in (dati.get("parametri") or {}).items() if v not in (None, "")}
+        mat = (dati.get("materiale") or "S235").upper()
+        par.setdefault("euro_kg", off["materiali"].get(mat, {}).get("euro_kg"))
+        par.setdefault("costo_attrezzaggio", off["costi"]["attrezzaggio"])
+        for k in ("margine", "scarto"):
+            par.setdefault(k, off["costi"][k])
+        if par.get("trattamento") and par["trattamento"] in off["trattamenti"]:
+            par["euro_kg_trattamento"] = off["trattamenti"][par["trattamento"]]["euro_kg"]
+        return jsonify(preventivo=calcola(an, c, par), saltate=an["saltate"],
                        avviso="Preventivo indicativo: prezzi dei materiali e costi orari sono valori medi, aggiornali con i tuoi.")
     except (ValueError, TypeError, KeyError) as exc:
         return jsonify(error=str(exc)[:400]), 400

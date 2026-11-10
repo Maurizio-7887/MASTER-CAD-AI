@@ -1,0 +1,18 @@
+{% extends "home/base.html" %}
+{% set aiuto = 'versioni' %}
+{% block titolo %}Versioni e decisioni · MASTER CAD AI{% endblock %}
+{% block barra %}Versioni e registro delle decisioni{% endblock %}
+{% block testa %}<style>.linea{border-left:3px solid var(--blu);padding-left:14px;margin-left:6px}.ver{position:relative;margin-bottom:16px}.ver::before{content:"";position:absolute;left:-22px;top:6px;width:13px;height:13px;border-radius:50%;background:#fff;border:3px solid var(--blu)}
+.ver ul{margin:6px 0;padding-left:18px;font-size:13px}.dec{background:#f5f6f7;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13px}.dec small{color:var(--testo2)}</style>{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Versioni e registro delle decisioni</h1>
+<p class="sotto">Ogni versione dice cosa è cambiato nella geometria (lavorazione per lavorazione, non «file diverso») e quali decisioni sono state prese: chi, cosa, con quale norma o calcolo. Si può tornare a qualsiasi versione.</p></div></div>
+<div id="pezzo"></div>
+<div class="griglia" id="corpo" hidden style="grid-template-columns:minmax(260px,340px) 1fr">
+  <section class="carta"><h2>Chi sei</h2><label for="v-utente">Nome (va nel registro)</label><input id="v-utente" maxlength="60" placeholder="es. Marco Rossi – UT">
+    <h2 style="margin-top:16px">Altri progetti salvati</h2><table class="dati" id="v-progetti"></table></section>
+  <section class="carta"><h2 id="v-titolo">Storico</h2><div id="msg" class="messaggio" hidden></div>
+    <div id="v-registro"></div><div class="linea" id="v-storico"><div class="vuoto-stato">Nessuna versione salvata: nel CAD scrivi cosa è cambiato e premi «Salva versione».</div></div></section>
+</div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('versioni.static', filename='versioni.js') }}"></script>{% endblock %}

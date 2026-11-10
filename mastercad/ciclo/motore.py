@@ -8,6 +8,7 @@ import math
 import cadquery as cq
 
 from ..materiali import materiale as dati_materiale
+from ..officina import scegli_macchina
 from ..progetto.analisi import _num, contorno_esterno, grezzo, descrivi_foro  # noqa: F401
 
 FRESE = (2, 3, 4, 5, 6, 8, 10, 12, 16, 20)
@@ -43,7 +44,7 @@ class _Utensili:
         return self._idx[chiave]
 
 
-def calcola(an, codice_materiale="S235"):
+def calcola(an, codice_materiale="S235", officina=None):
     """Ciclo completo dal progetto analizzato (vedi progetto.analisi.analizza)."""
     m = dati_materiale(codice_materiale)
     g = grezzo(an)
@@ -167,8 +168,24 @@ def calcola(an, codice_materiale="S235"):
                sum(2 * (f["prof"] + 2) / (p * n) for f in gr) + 0.08 * len(gr), {"tipo": "maschiatura", "fori": [f["rif"] for f in gr]})
         lam = {}
         for f in fori:
-            if f["lamatura"]:
-                lam.setdefault(float(f["lamatura"]["d"]), []).append(f)
+            if not f["lamatura"]:
+                continue
+            dl = float(f["lamatura"]["d"])
+            if dl > DIAM_MAX_PUNTA or f["lamatura"].get("tolleranza"):     # sede (es. cuscinetto): fresata e poi barenata
+                D = _fresa_per(min(dl - f["d_punta"], dl) * 0.9 if dl - f["d_punta"] > 4 else dl * 0.6)
+                T = ut.prendi("fresa%g" % D, "Fresa cilindrica Ø%g, 3 taglienti, metallo duro" % D, D)
+                n = _giri(m["vc_fresa"], D)
+                vfi = int(n * 3 * m["fz"] * 0.6)
+                pl = float(f["lamatura"]["prof"])
+                op(lato, "Fresatura sede Ø%s × %s (foro %d)" % (_num(dl), _num(pl), f["rif"]), T, n, vfi,
+                   math.pi * dl * (pl / max(0.5, D * 0.1) + 3) / vfi + 0.3, {"tipo": "sede", "d": D, "fori": [f["rif"]]})
+                if f["lamatura"].get("tolleranza"):
+                    Tb = ut.prendi("bareno%g" % dl, "Testina di barenatura Ø%s %s" % (_num(dl), f["lamatura"]["tolleranza"]), dl)
+                    nb = _giri(m["vc_fresa"] * 0.6, dl)
+                    op(lato, "Barenatura sede Ø%s %s (foro %d)" % (_num(dl), f["lamatura"]["tolleranza"], f["rif"]), Tb, nb, int(0.08 * nb),
+                       (pl + 2) / (0.08 * nb) * 2 + 0.3, {"tipo": "barenatura_sede", "fori": [f["rif"]]})
+                continue
+            lam.setdefault(dl, []).append(f)
         for dl, gr in sorted(lam.items()):
             T = ut.prendi("lamatore%g" % dl, "Fresa per lamature Ø%s con pilota" % _num(dl), dl)
             n = _giri(m["vc_punta"] * 1.2, dl)
@@ -200,30 +217,75 @@ def calcola(an, codice_materiale="S235"):
         op(lato_a, "Svuotatura (guscio, pareti %s mm)" % _num(gsc["spessore"]), T, n, vfg, gsc["volume"] / (0.5 * 10 * 5 * vfg) + 1,
            {"tipo": "guscio"})
 
-    fasi = [{"n": 10, "nome": "Taglio del grezzo", "macchina": "Sega a nastro", "operazioni": [
+    off = officina or _officina_predefinita()
+    if tornito:
+        mac_a = scegli_macchina(off, "tornio", (g["y"], g["x"]))
+    else:
+        mac_a = scegli_macchina(off, "fresa", (g["x"], g["y"], g["z"]))
+    sega = scegli_macchina(off, "sega", (g["y"], g["x"]))
+    banco = float(off["costi"]["banco"])
+    fasi = [{"n": 10, "nome": "Taglio del grezzo", "macchina": sega["nome"], "costo_ora": sega["costo_ora"], "tipo_fase": "taglio", "operazioni": [
         {"descrizione": "Taglio: " + g["descrizione"], "T": None, "giri": None, "vf": None,
          "tempo": round(g["sezione"] / m["taglio"] + 1.0, 2), "dati": {"tipo": "taglio"}}]}]
-    macchina = "Tornio CNC" if tornito else "Centro di lavoro CNC (fresatrice 3 assi)"
-    fasi.append({"n": 20, "nome": "Lavorazione lato A" if not tornito else "Tornitura", "macchina": macchina, "operazioni": lato_a,
-                 "programma": True})
+    fasi.append(dict(_fase(mac_a), n=20, nome="Lavorazione lato A" if not tornito else "Tornitura", operazioni=lato_a, programma=True))
     if tornito and lato_b:
-        fasi.append({"n": 30, "nome": "Forature e fresature trasversali", "macchina": "Centro di lavoro CNC", "operazioni": lato_b})
+        mac_b = scegli_macchina(off, "fresa", (g["x"], g["y"], g["z"]))
+        fasi.append(dict(_fase(mac_b), n=30, nome="Forature e fresature trasversali", operazioni=lato_b))
     elif lato_b:
-        fasi.append({"n": 30, "nome": "Lavorazione lato B (pezzo girato)", "macchina": macchina, "operazioni": lato_b})
+        fasi.append(dict(_fase(mac_a), n=30, nome="Lavorazione lato B (pezzo girato)", operazioni=lato_b))
     n_part = len(an["fori"]) + len(an["tasche"]) + len(an["spigoli"])
-    fasi.append({"n": 40 if len(fasi) == 3 else 30, "nome": "Sbavatura e pulizia", "macchina": "Banco",
+    fasi.append({"n": fasi[-1]["n"] + 10, "nome": "Sbavatura e pulizia", "macchina": "Banco", "costo_ora": banco, "tipo_fase": "banco",
                  "operazioni": [{"descrizione": "Sbavatura spigoli e fori, soffiatura", "T": None, "giri": None, "vf": None,
                                  "tempo": round(1.0 + 0.08 * n_part, 2), "dati": {}}]})
-    fasi.append({"n": fasi[-1]["n"] + 10, "nome": "Controllo", "macchina": "Sala metrologica / banco",
-                 "operazioni": [{"descrizione": "Controllo quote a disegno (calibro, tamponi per fori%s)" % (" e filetti" if any(f["filetto"] for f in an["fori"]) else ""),
-                                 "T": None, "giri": None, "vf": None, "tempo": round(1.0 + 0.1 * len(an["fori"]), 2), "dati": {}}]})
-    tempo_macchina = sum(o["tempo"] for f in fasi if f["n"] in (20, 30) and f["macchina"] != "Banco" for o in f["operazioni"])
-    tempo_banco = sum(o["tempo"] for f in fasi if f["macchina"] in ("Banco", "Sala metrologica / banco", "Sega a nastro") for o in f["operazioni"])
-    n_fasi_macchina = sum(1 for f in fasi if f["macchina"] not in ("Banco", "Sala metrologica / banco", "Sega a nastro"))
-    attrezzaggio = 30 * n_fasi_macchina + 4 * len(ut.elenco) + 10
+    piano = piano_controllo(an)
+    fasi.append({"n": fasi[-1]["n"] + 10, "nome": "Controllo", "macchina": "Sala metrologica / banco", "costo_ora": banco, "tipo_fase": "controllo",
+                 "operazioni": [{"descrizione": c["descrizione"], "T": None, "giri": None, "vf": None, "tempo": c["tempo"], "dati": {"strumento": c["strumento"]}}
+                                for c in piano]})
+    macchina_fasi = [f for f in fasi if f.get("tipo_fase") == "macchina"]
+    tempo_macchina = sum(o["tempo"] for f in macchina_fasi for o in f["operazioni"])
+    tempo_banco = sum(o["tempo"] for f in fasi if f.get("tipo_fase") != "macchina" for o in f["operazioni"])
+    attrezzaggio = 30 * len(macchina_fasi) + 4 * len(ut.elenco) + 10
+    terzi = [{"fase": f["n"], "macchina": f["macchina"], "motivo": f.get("motivo"), "giorni": f.get("giorni")} for f in fasi if f.get("interna") is False]
     return {"materiale": m["nome"], "codice_materiale": codice_materiale, "grezzo": g, "fasi": fasi, "utensili": ut.elenco,
+            "piano_controllo": piano, "terzisti": terzi,
             "tempi": {"macchina_min": round(tempo_macchina, 1), "banco_min": round(tempo_banco, 1),
                       "attrezzaggio_min": round(attrezzaggio, 1), "tornito": tornito}}
+
+
+def _fase(mac):
+    return {"macchina": mac["nome"], "costo_ora": mac["costo_ora"], "interna": mac.get("interna", True), "motivo": mac.get("motivo"),
+            "giorni": mac.get("giorni"), "tipo_fase": "macchina"}
+
+
+def _officina_predefinita():
+    from ..officina import PREDEFINITA
+    return PREDEFINITA
+
+
+def piano_controllo(an):
+    """Cosa controllare e con che strumento: tamponi P/NP per i fori in tolleranza, tamponi filettati, calibro per il resto."""
+    from ..tolleranze.funzioni import limiti_foro
+    piano, visti = [], set()
+    for f in an["fori"]:
+        for lim in limiti_foro(f):
+            chiave = ("t", lim["testo"])
+            n = sum(1 for g in an["fori"] if any(x["testo"] == lim["testo"] for x in limiti_foro(g)))
+            if chiave in visti:
+                continue
+            visti.add(chiave)
+            piano.append({"descrizione": "%d× %s: tampone P/NP — P %s · NP %s" % (n, lim["testo"], _num3(lim["min"]), _num3(lim["max"])),
+                          "strumento": "Tampone P/NP %s %s" % (_num(lim["nominale"]), lim["sigla"]), "tempo": 0.3 * n})
+        if f["filetto"] and ("f", f["filetto"]) not in visti:
+            visti.add(("f", f["filetto"]))
+            n = sum(1 for g in an["fori"] if g["filetto"] == f["filetto"])
+            piano.append({"descrizione": "%d× filetto %s 6H: tampone filettato P/NP" % (n, f["filetto"]), "strumento": "Tampone filettato %s 6H" % f["filetto"],
+                          "tempo": 0.25 * n})
+    piano.append({"descrizione": "Ingombri, posizione fori e quote libere: calibro (ISO 2768-m)", "strumento": "Calibro a corsoio", "tempo": 1.0 + 0.05 * len(an["fori"])})
+    return piano
+
+
+def _num3(v):
+    return ("%.3f" % float(v)).replace(".", ",")
 
 
 # ── programma CNC ──
@@ -256,6 +318,8 @@ def programma(an, ciclo, nome="PEZZO"):
              "(CICLI FISSI CON G98: RITORNO ALLA QUOTA INIZIALE TRA UN FORO E L'ALTRO)"]
     fori = {f["rif"]: f for f in an["fori"]}
     fase = next(f for f in ciclo["fasi"] if f["n"] == 20)
+    if fase.get("interna") is False:
+        righe.append("(FASE AFFIDATA A %s: PROGRAMMA INDICATIVO)" % fase["macchina"].upper()[:50])
     ut = {u["T"]: u for u in ciclo["utensili"]}
     gr = ciclo["grezzo"]
     x0, y0 = an["ingombro"]["xmin"] - 3, an["ingombro"]["ymin"] - 3
@@ -412,6 +476,37 @@ def programma(an, ciclo, nome="PEZZO"):
                 z = max(fondo, z - passo_z)
                 righe.append("G3 X%s Y%s Z%s I%s J0 F%d" % (_r(f["x"] + R), _r(f["y"]), _r(z), _r(-R), o["vf"]))
             righe += ["G3 X%s Y%s I%s J0" % (_r(f["x"] + R), _r(f["y"]), _r(-R)), "G1 X%s Y%s" % (_r(f["x"]), _r(f["y"])), "G0 Z5."]
+            fine()
+        elif tipo == "sede":
+            sel = [fori[r] for r in d.get("fori", []) if r in fori]
+            if not sel:
+                continue
+            f = sel[0]
+            D = d["d"]
+            dl, pl = float(f["lamatura"]["d"]), float(f["lamatura"]["prof"])
+            zf = f["z_faccia"] - ztop
+            R = dl / 2 - D / 2 - (0.15 if f["lamatura"].get("tolleranza") else 0)       # sovrametallo per la barenatura
+            passo_z = max(0.5, D * 0.1)
+            cambio(o, (f["x"] + R, f["y"]))
+            righe += ["G0 Z%s" % _r(zf + 2), "G1 Z%s F%d" % (_r(zf + 0.2), o["vf"])]
+            z = zf
+            while z > zf - pl + 1e-6:
+                z = max(zf - pl, z - passo_z)
+                righe.append("G3 X%s Y%s Z%s I%s J0 F%d" % (_r(f["x"] + R), _r(f["y"]), _r(z), _r(-R), o["vf"]))
+            passi = max(1, math.ceil(R / (0.45 * D)))
+            for k in range(passi, 0, -1):        # fondo piano della sede: cerchi verso il centro
+                rr = R * k / passi
+                righe += ["G1 X%s Y%s" % (_r(f["x"] + rr), _r(f["y"])), "G3 X%s Y%s I%s J0" % (_r(f["x"] + rr), _r(f["y"]), _r(-rr))]
+            righe += ["G1 X%s Y%s" % (_r(f["x"]), _r(f["y"])), "G0 Z5."]
+            fine()
+        elif tipo == "barenatura_sede":
+            sel = [fori[r] for r in d.get("fori", []) if r in fori]
+            if not sel:
+                continue
+            f = sel[0]
+            zf = f["z_faccia"] - ztop
+            cambio(o, (f["x"], f["y"]))
+            righe.append("G98 G76 X%s Y%s Z%s R%s Q0.1 F%d (BARENATURA SEDE)" % (_r(f["x"]), _r(f["y"]), _r(zf - float(f["lamatura"]["prof"])), _r(zf + 2), o["vf"]))
             fine()
         elif tipo == "barenatura":
             sel = [fori[r] for r in d.get("fori", []) if r in fori]

@@ -1,0 +1,94 @@
+{% extends "home/base.html" %}
+{% set aiuto = 'come-si-lavora' %}
+{% block titolo %}Manuale · MASTER CAD AI{% endblock %}
+{% block barra %}Manuale d'uso{% endblock %}
+{% block contenuto %}
+<div class="manuale">
+<h1>Manuale d'uso</h1>
+<p class="sotto">MASTER CAD AI porta dallo scopo del pezzo al pezzo prodotto. Ogni pagina ha il «?» in alto a destra che porta qui, alla sezione giusta.</p>
+<section class="carta" style="--c:#556b82"><h3>Indice</h3><ul class="indice">
+  <li><a href="#come-si-lavora">Come si lavora</a></li><li><a href="#reverse">Dalla foto al 3D</a></li><li><a href="#disegno">Disegno CAD e comandi</a></li>
+  <li><a href="#progetto">Indicazioni del tecnico</a></li><li><a href="#scopo">Lo scopo delle quote</a></li><li><a href="#tolleranze">Accoppiamenti e tolleranze</a></li>
+  <li><a href="#generativo">Dal carico alla forma</a></li><li><a href="#libreria">Libreria a norma</a></li><li><a href="#fattibilita">Verifica fattibilità</a></li>
+  <li><a href="#versioni">Versioni e decisioni</a></li><li><a href="#officina">La mia officina</a></li><li><a href="#tavola">Disegno tecnico</a></li>
+  <li><a href="#ciclo">Ciclo di lavoro e CNC</a></li><li><a href="#preventivo">Preventivo</a></li><li><a href="#qualita">Controllo qualità</a></li><li><a href="#ar">Realtà aumentata</a></li>
+  <li><a href="#limiti">Cosa il programma non fa</a></li></ul></section>
+
+<section class="carta" style="--c:#556b82"><h2 id="come-si-lavora">Come si lavora</h2>
+<ol><li><b>Crea il pezzo</b>: da una foto, disegnandolo, dalla libreria o calcolandolo dai carichi. Il pezzo aperto è uno solo e tutte le pagine lavorano su quello (lo vedi nel riquadro in alto).</li>
+<li><b>Dai lo scopo alle quote</b>: ogni foro importante dice perché esiste (cuscinetto 6204, spina Ø8…). Il programma mette tolleranza ISO 286, ciclo e controllo giusti.</li>
+<li><b>Verifica</b>: dopo ogni modifica nel CAD vedi subito costo al pezzo e fattibilità.</li>
+<li><b>Officina</b>: disegno tecnico, ciclo, programma CNC e piano di controllo.</li>
+<li><b>Vendi e controlla</b>: preventivo, controllo del pezzo prodotto con la foto, AR al cliente. Salva una versione quando prendi una decisione importante.</li></ol>
+<p>Prima di tutto imposta <a href="/officina">La mia officina</a>: macchine, terzisti e prezzi rendono veri costi e tempi.</p></section>
+
+<section class="carta" style="--c:#0a6ed1"><h2 id="reverse">Dalla foto al 3D</h2>
+<ol><li>Appoggia il pezzo su un <b>foglio A4 bianco</b> su un piano scuro, luce diffusa senza ombre forti.</li>
+<li>Fotografa <b>perpendicolare</b>, con tutto il foglio nell'inquadratura.</li>
+<li>Nel CAD, pannello «Reverse engineering da foto»: scegli la foto, «Dall'alto» per pezzi piatti, «Di lato» per pezzi torniti, «Di fronte» come seconda vista per staffe a L e pezzi a gradini.</li>
+<li>Il contorno arriva sulla tavola in millimetri: correggilo con i comandi, poi <code>ESTRUDI</code> (o <code>RIVOLUZIONE</code>).</li></ol>
+<p>Precisione tipica ±0,5–1 mm: le misure vere le dà il tecnico con le indicazioni (vedi sotto), che correggono quelle della foto.</p></section>
+
+<section class="carta" style="--c:#0a6ed1"><h2 id="disegno">Disegno CAD e comandi</h2>
+<p>Si usa come AutoCAD: scrivi il comando nella riga in basso e premi INVIO. Coordinate: <code>100,50</code> assolute, <code>@30,0</code> relative, <code>@50&lt;45</code> polari, <code>40</code> per una lunghezza verso il cursore. INVIO a vuoto ripete l'ultimo comando, ESC annulla, F3 OSNAP, F8 ORTO.</p>
+<p><b>2D</b>: LINEA (L), PLINEA (PL), CERCHIO (C), ARCO (A), RETTANGOLO (REC), POLIGONO, SPOSTA (M), COPIA (CO), RUOTA (RO), SPECCHIO (MI), SCALA (SC), OFFSET (O), RACCORDO (F), CIMA (CHA), TAGLIA (TR), ESTENDI (EX), SERIEPOLARE (AP), SERIERETT (AR), QUOTA, DIST, DXFIN/DXFOUT.</p>
+<p><b>3D</b>: ESTRUDI, RIVOLUZIONE, FORO (anche in serie), TASCA, ASOLA, RIALZO, RACCORDASPIGOLI, SMUSSASPIGOLI, GUSCIO. Ogni lavorazione va nell'albero e si può sospendere o togliere.</p></section>
+
+<section class="carta" style="--c:#0a6ed1"><h2 id="progetto">Indicazioni del tecnico</h2>
+<p>Nel pannello «Progetto» scrivi in italiano, separando con punto e virgola. Esempi che il programma capisce:</p>
+<ul><li><code>spessore 15; diametro esterno 120</code> — misure d'ingombro (correggono la scala della foto)</li>
+<li><code>foro centrale Ø30 H7 con lamatura Ø40 profonda 5</code></li><li><code>4 fori M8 lamati su interasse 70</code> · <code>2x2 fori Ø9 passo 80x40</code></li>
+<li><code>foro M6 filettato profondo 12 in 0,40</code> · <code>foro Ø10 in 10,-5 dal centro</code></li>
+<li><code>sede cuscinetto 6204 in 0,0</code> · <code>sede cuscinetto 6205 K7 cieca in 50,20</code> · <code>foro spina Ø8 in 40,20</code> · <code>boccola 20x23 in 30,60</code></li>
+<li><code>tasca 40x20 profonda 6 in 30,50 raggio 4</code> · <code>asola 30x8 verticale in -40,0</code> · <code>rialzo Ø60 alto 5</code></li>
+<li><code>raccordo R1 spigoli superiori</code> · <code>smusso 0.5 bordi inferiori</code> · <code>guscio spessore 3 aperto sotto</code></li></ul>
+<p>Quello che non capisce lo dice («Non capito») e non lo inventa: riscrivilo come negli esempi.</p></section>
+
+<section class="carta" style="--c:#7858ff"><h2 id="scopo">Lo scopo delle quote</h2>
+<p>Nell'albero delle lavorazioni ogni foro ha il pulsante <b>Scopo</b>: scegli perché esiste (sede cuscinetto, foro spina, sede boccola, passaggio vite, filetto, quota libera) e il componente. Prima di confermare vedi <b>cosa cambia</b>: misure, nuovi problemi di fattibilità, volume. Esempio: passare da cuscinetto 6204 a 6205 allarga la sede da Ø47 a Ø52 e il programma ti avvisa se la parete verso il bordo diventa troppo sottile.</p>
+<p>Lo scopo arriva ovunque: tolleranza con i limiti nella tabella fori della tavola, barenatura o alesatura nel ciclo, tampone passa/non passa nel piano di controllo, norma citata nel registro delle decisioni.</p></section>
+
+<section class="carta" style="--c:#7858ff"><h2 id="tolleranze">Accoppiamenti e tolleranze</h2>
+<p>Calcolo di giochi e interferenze ISO 286 (es. Ø20 H7/g6), catene di tolleranza nel caso peggiore e statistico, tabelle di cuscinetti, spine e accoppiamenti tipici delle macchine automatiche.</p></section>
+
+<section class="carta" style="--c:#0a6ed1"><h2 id="generativo">Dal carico alla forma</h2>
+<ol><li>Scegli la sagoma: un rettangolo, oppure il contorno del pezzo aperto nel CAD.</li><li>Clicca dove sono le <b>viti</b> (con la misura, es. M10), dove agisce il <b>carico</b> (forza in newton e Ø del perno) e le <b>zone vietate</b> (passaggi d'aria, ingombri).</li>
+<li>Indica massa massima e coefficiente di sicurezza, poi «Calcola la forma».</li><li>Il programma toglie il materiale che non lavora, verifica la tensione e porta lo spessore al valore commerciale che rispetta la sicurezza. «Usa questa forma nel CAD» la apre come progetto normale.</li></ol>
+<p>È un calcolo 2D lineare con i carichi nel piano del pezzo: per pezzi critici, a fatica o con carichi fuori piano serve un FEM 3D.</p></section>
+
+<section class="carta" style="--c:#0a6ed1"><h2 id="libreria">Libreria a norma</h2>
+<p>Flange EN 1092-1 PN16, piastre forate, staffe a L, boccole, alberi a gradini: scrivi le misure e il pezzo si apre nel CAD, già modificabile. Le tabelle sono indicative: verificale sulla norma in vigore.</p></section>
+
+<section class="carta" style="--c:#7858ff"><h2 id="fattibilita">Verifica fattibilità</h2>
+<p>Le regole del tecnico esperto: parete fra foro e bordo e fra due fori, sedi e lamature più profonde dello spessore, fori lunghi, filetti troppo corti o inutilmente lunghi, spine con poca presa, tolleranze strette e costose, angoli vivi nelle tasche, fondi sottili, pezzo che non entra nelle tue macchine. Ogni avviso dice dove, perché e come rimediare. La trovi anche, riassunta, sotto l'albero nel CAD dopo ogni modifica.</p></section>
+
+<section class="carta" style="--c:#7858ff"><h2 id="versioni">Versioni e decisioni</h2>
+<p>Nel CAD, sotto l'albero, scrivi in una riga cosa è cambiato e premi «Salva versione». Ogni versione mostra le lavorazioni aggiunte, tolte e cambiate e le decisioni prese nel frattempo (chi, cosa, con quale norma o calcolo). Nella pagina Versioni puoi riaprirne una qualsiasi. Il tuo nome per il registro si imposta lì.</p></section>
+
+<section class="carta" style="--c:#e76500"><h2 id="officina">La mia officina</h2>
+<p>Inserisci le macchine con le corse (frese X/Y/Z, torni e rettifiche Ø e lunghezza) e il costo orario, i terzisti con le lavorazioni che fanno, la tariffa e i giorni di consegna, i prezzi di materiali e trattamenti, i costi di banco e attrezzaggio. Se un pezzo non entra in nessuna macchina interna, il ciclo manda la fase al terzista giusto e il preventivo usa la sua tariffa.</p></section>
+
+<section class="carta" style="--c:#e76500"><h2 id="tavola">Disegno tecnico</h2>
+<p>Tavola A3 con metodo europeo (E): vista frontale, dall'alto, sezione A-A o vista laterale, assonometria, quote d'ingombro, tabella fori con coordinate e limiti di tolleranza, viteria consigliata, note e cartiglio. PDF da stampare, DXF a layer per AutoCAD, SVG. Le quote funzionali aggiuntive e la firma del controllo restano a te.</p></section>
+
+<section class="carta" style="--c:#e76500"><h2 id="ciclo">Ciclo di lavoro e CNC</h2>
+<p>Fasi in ordine di officina sulle tue macchine (o dal terzista), utensili, giri e avanzamenti dal materiale, tempi, piano di controllo con i tamponi P/NP, e il programma ISO (Fanuc/Haas) della fase 20. Zero pezzo G54: X0 Y0 origine del disegno, Z0 faccia superiore finita. <b>Il programma va sempre simulato</b> prima di lavorare; raccordi e svuotature 3D vanno fatti con il CAM.</p></section>
+
+<section class="carta" style="--c:#188918"><h2 id="preventivo">Preventivo</h2>
+<p>Materiale (grezzo × €/kg dell'officina), tempo di ogni fase × tariffa della sua macchina o del terzista, attrezzaggio diviso sul lotto, trattamento, scarto e margine. Prezzi per più quantità e offerta stampabile. Nel CAD vedi il costo a ogni modifica e di quanto è salito o sceso.</p></section>
+
+<section class="carta" style="--c:#188918"><h2 id="qualita">Controllo qualità con la foto</h2>
+<p>Fotografa il pezzo prodotto su un foglio A4, dall'alto. Il programma lo allinea al progetto e confronta ingombri e fori passanti: verbale OK/KO con la sovrapposizione grafica e storico dei controlli. Trova gli errori grossi (foro mancante, spostato, Ø sbagliato); filetti, sedi e quote in altezza si controllano con gli strumenti del piano di controllo.</p></section>
+
+<section class="carta" style="--c:#188918"><h2 id="ar">Realtà aumentata</h2>
+<p>Inquadra il QR col telefono e tocca «Vedi nel tuo spazio»: il pezzo appare sul tavolo a grandezza reale. Il link apre solo quel modello, senza password, per 7 giorni.</p></section>
+
+<section class="carta" style="--c:#556b82"><h2 id="parla">Progetta parlando</h2><p>Pezzi semplici descritti a voce o per iscritto («cilindro diametro 50 altezza 30»). Per i pezzi veri usa il Disegno CAD con le indicazioni del tecnico.</p></section>
+
+<section class="carta" style="--c:#556b82"><h2 id="limiti">Cosa il programma non fa</h2>
+<ul><li>Non sostituisce il FEM 3D, la verifica a fatica, il CAM 5 assi e la firma del progettista.</li>
+<li>Prezzi, tariffe e parametri di taglio sono quelli che inserisci nell'officina: se mancano usa valori medi.</li>
+<li>Le tabelle normative (ISO 286, EN 1092-1, cuscinetti) coprono i casi più usati: per i casi limite fa fede la norma in vigore.</li>
+<li>L'interprete delle indicazioni lavora a regole fisse: niente risposte inventate, ma frasi molto libere possono non essere capite.</li></ul></section>
+</div>
+{% endblock %}

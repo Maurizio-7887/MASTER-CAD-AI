@@ -10,8 +10,10 @@
   {% if not home %}<a class="bottone" href="/" title="Torna alla home">⌂ Home</a>{% endif %}
   <span class="titolo">{% block barra %}{% endblock %}</span>
   <span class="spazio"></span>
+  {% set sezione = aiuto if aiuto is defined else (request.blueprint if request.blueprint not in ('home', None) else 'come-si-lavora') %}
+  <a class="bottone aiuto" href="/manuale#{{ sezione }}" title="Manuale: come si usa questa pagina">?</a>
   {% set allievo = session.get('allievo') if not session.get('ok') else None %}
-  <span class="utente"><span class="avatar">{{ (allievo.nome[:1] if allievo else 'D')|upper }}</span><span>{{ allievo.nome if allievo else 'Docente / ufficio tecnico' }}</span></span>
+  <span class="utente"><span class="avatar">{{ (allievo.nome[:1] if allievo else 'U')|upper }}</span><span>{{ allievo.nome if allievo else 'Ufficio tecnico' }}</span></span>
   <button type="button" id="esci">Esci</button>
 </header>
 <main class="pagina">

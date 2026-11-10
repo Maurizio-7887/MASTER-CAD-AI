@@ -1,0 +1,48 @@
+{% extends "home/base.html" %}
+{% set aiuto = 'generativo' %}
+{% block titolo %}Dal carico alla forma · MASTER CAD AI{% endblock %}
+{% block barra %}Dal carico alla forma{% endblock %}
+{% block testa %}<style>
+#piano{width:100%;height:auto;background:#fff;border:1px solid var(--bordo);border-radius:8px;cursor:crosshair;touch-action:none}
+.strumenti{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.strumenti button.on{background:var(--blu);color:#fff}
+.mini input{padding:5px 6px;font-size:13px}.mini td{padding:4px 4px}#densita{width:100%;image-rendering:pixelated;border-radius:8px;border:1px solid var(--bordo)}
+#mappa{width:100%;image-rendering:pixelated;border-radius:8px;border:1px solid var(--bordo)}
+</style>{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Dal carico alla forma</h1>
+<p class="sotto">Dici dove si fissa il pezzo, che carico regge e quanto può pesare: il programma toglie il materiale dove non lavora (ottimizzazione topologica), verifica la resistenza e sceglie lo spessore commerciale. Il risultato è un progetto normale, che modifichi nel CAD.</p></div></div>
+<div class="griglia" style="grid-template-columns:minmax(320px,440px) 1fr">
+  <div>
+    <section class="carta">
+      <h2>1 · Sagoma e materiale</h2>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--testo)"><input type="checkbox" id="g-usa" style="width:auto"> <span>Parti dal contorno del pezzo aperto (<b id="g-nome">nessuno</b>)</span></label>
+      <div class="due" id="g-rett"><div><label for="g-l">Larghezza (mm)</label><input id="g-l" type="number" value="120"></div><div><label for="g-h">Altezza (mm)</label><input id="g-h" type="number" value="80"></div></div>
+      <div class="due"><div><label for="g-mat">Materiale</label><select id="g-mat">{% for m in materiali %}<option value="{{ m.codice }}">{{ m.nome }}</option>{% endfor %}</select></div>
+        <div><label for="g-t">Spessore di partenza (mm)</label><input id="g-t" type="number" value="10"></div></div>
+      <div class="due"><div><label for="g-massa">Massa massima (g)</label><input id="g-massa" type="number" placeholder="es. 350"></div>
+        <div><label for="g-sic">Coefficiente di sicurezza</label><input id="g-sic" type="number" step="0.1" value="2"></div></div>
+    </section>
+    <section class="carta">
+      <h2>2 · Vincoli e carichi</h2>
+      <p class="sotto" style="margin:0">Scegli lo strumento e clicca sulla sagoma. Le forze sono in newton (12 kN = 12000 N), verso l'alto/destra positive.</p>
+      <div class="strumenti"><button class="btn sec on" data-modo="vite">🔩 Vite</button><button class="btn sec" data-modo="carico">⬇ Carico</button><button class="btn sec" data-modo="zona">▭ Zona vietata</button><button class="btn sec" id="g-pulisci">Svuota</button></div>
+      <table class="dati mini" id="t-viti"></table>
+      <table class="dati mini" id="t-carichi" style="margin-top:8px"></table>
+      <table class="dati mini" id="t-zone" style="margin-top:8px"></table>
+      <div class="azioni"><button class="btn" id="g-calcola">Calcola la forma</button></div>
+      <div id="msg" class="messaggio" hidden></div>
+    </section>
+  </div>
+  <div>
+    <section class="carta"><svg id="piano" viewBox="0 0 400 300"></svg></section>
+    <section class="carta" id="risultato" hidden>
+      <h2>Forma ottimizzata</h2>
+      <div class="kpi-riga" id="g-kpi"></div>
+      <div class="due"><div><h3>Materiale che lavora</h3><canvas id="densita"></canvas></div><div><h3>Tensioni (blu basse → rosso al limite)</h3><img id="mappa" alt="Mappa delle tensioni"></div></div>
+      <ul id="g-avvisi" class="sotto" style="font-size:12.5px"></ul>
+      <div class="azioni"><button class="btn" id="g-usa-forma">Usa questa forma nel CAD</button></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('generativo.static', filename='generativo.js') }}"></script>{% endblock %}

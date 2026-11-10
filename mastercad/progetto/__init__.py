@@ -68,3 +68,24 @@ def costruisci():
     except Exception:
         current_app.logger.exception("Errore costruzione progetto")
         return jsonify(error="Il motore 3D non è riuscito a costruire la forma di base: controlla i contorni"), 500
+
+
+@bp.post("/api/progetto/funzione")
+def funzione():
+    """Assegna o cambia lo scopo di un foro (cuscinetto, spina, boccola, vite…) e dice cosa cambia nel pezzo."""
+    import copy
+    from ..tolleranze.funzioni import applica_funzione, impatto
+    try:
+        dati = _json()
+        prog = dati.get("progetto") or {}
+        i = int(dati.get("indice"))
+        lavs = prog.get("lavorazioni") or []
+        if not 0 <= i < len(lavs) or lavs[i].get("tipo") not in ("foro", "serie_polare", "serie_rett"):
+            raise ValueError("Lo scopo si assegna ai fori (singoli o in serie)")
+        nuovo = copy.deepcopy(prog)
+        nuovo["lavorazioni"][i] = applica_funzione(lavs[i], dati.get("funzione") or {})
+        with _LOCK:
+            imp = impatto(prog, nuovo)
+        return jsonify(progetto=nuovo, impatto=imp, funzione=nuovo["lavorazioni"][i]["funzione"])
+    except (ValueError, TypeError, KeyError) as exc:
+        return jsonify(error=str(exc)[:400]), 400

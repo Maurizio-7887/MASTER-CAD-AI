@@ -9,15 +9,12 @@
   <section class="carta no-stampa">
     <h2>Dati del preventivo</h2>
     <label for="p-cliente">Cliente</label><input id="p-cliente" maxlength="80" placeholder="facoltativo">
-    <label for="p-mat">Materiale</label><select id="p-mat">{% for m in materiali %}<option value="{{ m.codice }}" data-eur="{{ m.euro_kg }}">{{ m.nome }} (≈ {{ '%.2f'|format(m.euro_kg) }} €/kg)</option>{% endfor %}</select>
-    <div class="due"><div><label for="p-eurkg">Prezzo materiale €/kg</label><input id="p-eurkg" type="number" step="0.01" min="0"></div>
+    <label for="p-mat">Materiale</label><select id="p-mat">{% for m in materiali %}<option value="{{ m.codice }}">{{ m.nome }}</option>{% endfor %}</select>
+    <div class="due"><div><label for="p-eurkg">Prezzo materiale €/kg</label><input id="p-eurkg" type="number" step="0.01" min="0" placeholder="dell'officina"></div>
       <div><label for="p-tr">Trattamento</label><select id="p-tr">{% for t in trattamenti %}<option value="{{ t.codice }}">{{ t.nome }}</option>{% endfor %}</select></div></div>
-    <div class="due"><div><label for="p-cnc">Costo CNC €/ora</label><input id="p-cnc" type="number" step="1" value="{{ default.costo_cnc }}"></div>
-      <div><label for="p-tornio">Costo tornio €/ora</label><input id="p-tornio" type="number" step="1" value="{{ default.costo_tornio }}"></div></div>
-    <div class="due"><div><label for="p-banco">Banco/controllo €/ora</label><input id="p-banco" type="number" step="1" value="{{ default.costo_banco }}"></div>
-      <div><label for="p-att">Attrezzaggio €/ora</label><input id="p-att" type="number" step="1" value="{{ default.costo_attrezzaggio }}"></div></div>
-    <div class="due"><div><label for="p-scarto">Scarto %</label><input id="p-scarto" type="number" step="0.5" value="{{ default.scarto }}"></div>
-      <div><label for="p-margine">Margine %</label><input id="p-margine" type="number" step="1" value="{{ default.margine }}"></div></div>
+    <div class="aiuto">Tariffe di macchine, terzisti, banco e attrezzaggio: quelle della <a href="/officina">tua officina</a>. Ogni fase usa la tariffa della macchina che la fa.</div>
+    <div class="due"><div><label for="p-scarto">Scarto %</label><input id="p-scarto" type="number" step="0.5"></div>
+      <div><label for="p-margine">Margine %</label><input id="p-margine" type="number" step="1"></div></div>
     <label for="p-qta">Quantità (separate da virgola)</label><input id="p-qta" value="1, 10, 50, 100">
     <div class="azioni"><button class="btn" id="calcola">Calcola il prezzo</button><button class="btn sec" id="stampa" hidden>Stampa / PDF</button></div>
     <div id="msg" class="messaggio" hidden></div>

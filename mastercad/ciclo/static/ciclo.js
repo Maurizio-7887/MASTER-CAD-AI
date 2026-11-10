@@ -18,13 +18,15 @@
         return '<div class="kpi-box"><small>' + k[0] + '</small><b style="font-size:' + (String(k[1]).length > 18 ? 14 : 20) + 'px">' + MC.esc(k[1]) + '</b></div>'; }).join('');
       var h = '<tr><th>Fase</th><th>Operazione</th><th>Utensile</th><th class="num">Giri/min</th><th class="num">Avanz. mm/min</th><th class="num">Tempo min</th></tr>';
       c.fasi.forEach(function (f) {
-        h += '<tr><td colspan="6" style="background:#f5f6f7"><b>' + f.n + ' · ' + MC.esc(f.nome) + '</b> <span style="color:var(--testo2)">— ' + MC.esc(f.macchina) + '</span></td></tr>';
+        h += '<tr><td colspan="6" style="background:#f5f6f7"><b>' + f.n + ' · ' + MC.esc(f.nome) + '</b> <span style="color:var(--testo2)">— ' + MC.esc(f.macchina) +
+          (f.costo_ora ? ' · ' + MC.num(f.costo_ora, 0) + ' €/h' : '') + '</span>' + (f.interna === false ? ' <span class="stato att">terzista</span>' + (f.motivo ? ' <small>' + MC.esc(f.motivo) + '</small>' : '') : '') + '</td></tr>';
         f.operazioni.forEach(function (o) {
           h += '<tr><td></td><td>' + MC.esc(o.descrizione) + '</td><td>' + (o.T ? 'T' + o.T : '—') + '</td><td class="num">' + (o.giri ? MC.num(o.giri, 0) : '—') +
             '</td><td class="num">' + (o.vf ? MC.num(o.vf, 0) : '—') + '</td><td class="num">' + MC.num(o.tempo, 2) + '</td></tr>';
         });
       });
       $('t-fasi').innerHTML = h;
+      $('t-ctrl').innerHTML = '<tr><th>Controllo</th><th>Strumento</th></tr>' + (c.piano_controllo || []).map(function (x) { return '<tr><td>' + MC.esc(x.descrizione) + '</td><td>' + MC.esc(x.strumento) + '</td></tr>'; }).join('');
       $('t-ut').innerHTML = '<tr><th>T</th><th>Utensile</th></tr>' + c.utensili.map(function (u) { return '<tr><td>T' + u.T + '</td><td>' + MC.esc(u.descrizione) + '</td></tr>'; }).join('');
       $('gcode').textContent = j.gcode || '(pezzo tornito: il programma del tornio si prepara con il CAM del tornio)';
       $('scarica-nc').hidden = !j.gcode;

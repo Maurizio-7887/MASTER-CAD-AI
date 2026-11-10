@@ -4,6 +4,7 @@ import threading
 from flask import Blueprint, Response, current_app, jsonify, render_template, request, session
 
 from ..materiali import elenco as elenco_materiali
+from ..officina import leggi as leggi_officina
 from ..progetto.analisi import analizza
 from . import motore
 
@@ -19,7 +20,7 @@ def pagina():
 def _calcola(dati):
     with _LOCK:
         an = analizza(dati.get("progetto"))
-        c = motore.calcola(an, dati.get("materiale") or "S235")
+        c = motore.calcola(an, dati.get("materiale") or "S235", leggi_officina())
         prog = motore.programma(an, c, dati.get("nome") or "PEZZO")
     return an, c, prog
 
