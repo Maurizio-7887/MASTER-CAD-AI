@@ -19,6 +19,20 @@ Pagina **/disegno** (pulsante «📐 Disegno come AutoCAD» in alto):
 
 Codice: `mastercad/disegno/` (blueprint, pagina e motore comandi JS), `mastercad/reverse/` (blueprint e analisi della foto), `mastercad/profili.py` (dal 2D al solido CadQuery). Test: `tests/test_disegno_reverse.py`, `node tests/js/comandi.test.js`.
 
+## Novità: il CAD che conosce lo scopo del pezzo e la tua officina
+
+Pensato per il metalmeccanico (costruttori di macchine automatiche). L'idea: **ogni quota ha il suo perché** e il programma segue il filo requisito → geometria → tolleranza → processo → controllo, sulle macchine e con le tariffe della tua officina. L'AI propone, il motore geometrico e normativo verifica: niente risposte inventate.
+
+- **Home a colori per area** (crea · scopo · officina · vendi e controlla · aiuto) e **manuale integrato**: il «?» in ogni pagina porta alla sezione giusta (`/manuale`).
+- **Lo scopo delle quote** (`mastercad/tolleranze/`): sede cuscinetto (serie 60/62/63, ISO 15), foro spina (ISO 8734), sede boccola, passaggio vite, filetto. Tolleranze ISO 286 con i limiti (`iso286.py`: IT5–IT11, fori H/G/F/JS/K/M/N/P, alberi d–p), accoppiamenti, catene di tolleranza (caso peggiore e RSS). Il pulsante «Scopo» sull'albero mostra **l'impatto** prima di confermare (misure, nuovi problemi, volume). Indicazioni: «sede cuscinetto 6204 in 80,50», «foro spina Ø8 in 40,20», «boccola 20x23 in 30,60». I limiti arrivano in tavola, nel ciclo (barenatura sede, alesatura) e nel piano di controllo (tamponi P/NP).
+- **La mia officina** (`mastercad/officina/`): macchine con corse e costo orario, terzisti con lavorazioni, tariffe e giorni, prezzi di materiali e trattamenti. Il ciclo sceglie la macchina in cui il pezzo entra o il terzista; preventivo e fattibilità usano questi dati.
+- **Costo e fattibilità dal vivo** nel CAD, a ogni lavorazione, con la variazione rispetto alla modifica precedente.
+- **Versioni e registro delle decisioni** (`mastercad/versioni/`): differenze per lavorazione (identificativi stabili), chi ha deciso cosa e con quale norma o calcolo, ripristino di qualsiasi versione.
+- **Dal carico alla forma** (`mastercad/generativo/`): ottimizzazione topologica 2D SIMP (stato piano di tensione, filtro di densità, continuazione della penalizzazione) da viti, carichi, zone vietate e massa massima; contorno vero con fori esatti, verifica von Mises e spessore commerciale per il coefficiente di sicurezza voluto. Calcolo 2D lineare: per pezzi critici serve il FEM 3D.
+- **Disegno tecnico**: per le piastre la frontale diventa la sezione A-A (scala più grande), tabella fori con limiti di tolleranza e componente.
+
+Test: `tests/test_scopo_officina.py`.
+
 ## Novità: home a tile e strumenti d'officina
 
 La home (`/`) è un **launchpad a tile in stile SAP Fiori**, ordinato come si lavora: 1 · Crea il pezzo → 2 · Prepara l'officina → 3 · Vendi e controlla → 4 · Formazione. Ogni tile dice in una riga cosa fa e mostra l'ultimo risultato (lavorazioni, minuti macchina, prezzo, esito del controllo). In alto il percorso in 5 passi e il «pezzo aperto», lo stesso per tutte le pagine. La vecchia pagina vocale è su `/parla`.

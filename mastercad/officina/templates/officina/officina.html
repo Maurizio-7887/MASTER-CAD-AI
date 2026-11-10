@@ -1,0 +1,21 @@
+{% extends "home/base.html" %}
+{% set aiuto = 'officina' %}
+{% block titolo %}La mia officina · MASTER CAD AI{% endblock %}
+{% block barra %}La mia officina{% endblock %}
+{% block testa %}<style>.ed input,.ed select{padding:5px 7px;font-size:13px}.ed td{padding:4px}.ed .n{width:80px}</style>{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>La mia officina</h1>
+<p class="sotto">Le tue macchine con corse e costo orario, i terzisti con le lavorazioni che fanno, i prezzi di materiali e trattamenti. Ciclo, preventivo e fattibilità usano questi dati: se il pezzo non entra in macchina, la fase va al terzista giusto con la sua tariffa.</p></div>
+<div class="azioni"><button class="btn" id="salva">Salva l'officina</button></div></div>
+<div id="msg" class="messaggio" hidden></div>
+<section class="carta"><h2>Macchine</h2><p class="sotto" style="margin:0 0 6px">Frese: corse X, Y, Z. Torni e rettifiche: diametro e lunghezza massimi.</p>
+  <div class="scorri"><table class="dati ed" id="t-mac"></table></div><div class="azioni"><button class="btn sec" id="add-mac">+ Macchina</button></div></section>
+<section class="carta"><h2>Terzisti</h2><div class="scorri"><table class="dati ed" id="t-ter"></table></div><div class="azioni"><button class="btn sec" id="add-ter">+ Terzista</button></div></section>
+<div class="griglia" style="grid-template-columns:1fr 1fr">
+  <section class="carta"><h2>Prezzi materiali (€/kg)</h2><table class="dati ed" id="t-mat"></table></section>
+  <section class="carta"><h2>Trattamenti (€/kg) e costi</h2><table class="dati ed" id="t-tr"></table>
+    <table class="dati ed" id="t-costi" style="margin-top:10px"></table></section>
+</div>
+<script type="application/json" id="cataloghi">{{ {"tipi": tipi, "lavorazioni": lavorazioni, "materiali": materiali, "trattamenti": trattamenti}|tojson }}</script>
+{% endblock %}
+{% block script %}<script src="{{ url_for('officina.static', filename='officina.js') }}"></script>{% endblock %}

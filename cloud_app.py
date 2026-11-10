@@ -21,6 +21,10 @@ from mastercad.libreria import bp as libreria_bp
 from mastercad.ar import bp as ar_bp, init_db as ar_init_db
 from mastercad.qualita import bp as qualita_bp, init_db as qualita_init_db
 from mastercad.corso import bp as corso_bp, init_db as corso_init_db
+from mastercad.officina import bp as officina_bp, init_db as officina_init_db
+from mastercad.versioni import bp as versioni_bp, init_db as versioni_init_db
+from mastercad.tolleranze import bp as tolleranze_bp
+from mastercad.generativo import bp as generativo_bp
 
 app=Flask(__name__)
 app.config.update(SECRET_KEY=os.getenv("FLASK_SECRET_KEY") or secrets.token_urlsafe(48),
@@ -32,7 +36,8 @@ OUTPUT=Path(os.getenv("MASTER_CAD_OUTPUT","/tmp/mastercad-projects"))
 app.register_blueprint(disegno_bp)
 app.register_blueprint(reverse_bp)
 app.register_blueprint(progetto_bp)
-for _bp in (home_bp, tavola_bp, ciclo_bp, preventivo_bp, fattibilita_bp, libreria_bp, ar_bp, qualita_bp, corso_bp):
+for _bp in (home_bp, tavola_bp, ciclo_bp, preventivo_bp, fattibilita_bp, libreria_bp, ar_bp, qualita_bp, corso_bp,
+            officina_bp, versioni_bp, tolleranze_bp, generativo_bp):
     app.register_blueprint(_bp)
 # pagine aperte senza login: accesso, salute, vista AR condivisa con il QR, ingresso allievi
 PUBBLICHE=("/health","/login","/corso/entra")
@@ -208,3 +213,5 @@ init_db()
 ar_init_db()
 qualita_init_db()
 corso_init_db()
+officina_init_db()
+versioni_init_db()

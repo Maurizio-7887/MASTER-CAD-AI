@@ -183,7 +183,51 @@ def applica(testo, progetto):
             else:
                 capito.append("Spessore %g: con la base %s si ricava dalle viste" % (_f(m.group(2)), prog["base"].get("tipo")))
             fatto = True
-        if re.search(r"\bguscio|svuot", cl):
+        if not fatto and re.search(r"cuscinett|\bspin[ae]\b|boccol", cl):
+            # lo scopo del foro: il componente decide misura e tolleranza (ISO 286)
+            from ..tolleranze.funzioni import applica_funzione
+            pos = _posizione(cl, prog)
+            # tolleranza della sede (H7, K7, N7, JS7…); «m6» è la spina e «M8» una vite: non sono la tolleranza del foro
+            mt = _cerca(r"\b(js|[hgfknp])\s?([6-9])\b", re.sub(r"\d+\s*x\s*\d+", "", cl))
+            sigla = (mt.group(1).upper() + mt.group(2)) if mt else None
+            try:
+                if "cuscinett" in cl:
+                    mc = _cerca(r"\b(6[023]\d\d)\b", cl)
+                    if not mc:
+                        raise ValueError("scrivi la sigla del cuscinetto (es. 6204)")
+                    fz = {"tipo": "sede_cuscinetto", "componente": mc.group(1), "chiusa": bool(re.search(r"ciec|chius", cl))}
+                elif "boccol" in cl:
+                    mb = _cerca(NUM + r"\s*[x×]\s*" + NUM, cl)
+                    if not mb:
+                        raise ValueError("scrivi la boccola come interno×esterno (es. 20x23)")
+                    fz = {"tipo": "sede_boccola", "componente": "%sx%s" % (mb.group(1), mb.group(2))}
+                else:
+                    d = _diametro(cl)
+                    if d is None:
+                        raise ValueError("scrivi il diametro della spina (es. Ø8)")
+                    fz = {"tipo": "foro_spina", "diametro": d}
+                    p_ = _profondita(cl)
+                    if p_:
+                        fz["profondita"] = p_
+                if sigla:
+                    fz["sigla"] = sigla
+                mn = _cerca(r"(\d+)\s+(?:spine|cuscinetti|boccole|sedi|fori)", cl)
+                mi = _cerca(r"(?:interasse|primitivo)\s*(?:ø|di)?\s*" + NUM, cl)
+                if mn and mi and int(mn.group(1)) > 1:
+                    base_l = {"tipo": "serie_polare", "centro": _centro(prog), "diametro": _f(mi.group(1)), "n": int(mn.group(1)), "angolo0": 0, "foro": {}}
+                else:
+                    base_l = {"tipo": "foro", "x": pos[0], "y": pos[1]}
+                l = applica_funzione(base_l, fz)
+                nuove.append(l)
+                ultimo_gruppo = [l]
+                capito.append("%s in %s,%s → %s (%s)" % ({"sede_cuscinetto": "Sede cuscinetto", "sede_boccola": "Sede boccola", "foro_spina": "Foro spina"}[fz["tipo"]],
+                              _fmt(pos[0]), _fmt(pos[1]), l["funzione"].get("componente"), l["funzione"]["norma"]))
+            except ValueError as exc:
+                non_capito.append("«%s»: %s" % (cl, exc))
+            fatto = True
+        elif fatto:
+            pass
+        elif re.search(r"\bguscio|svuot", cl):
             m = _cerca(r"(?:spessore|parete|pareti)\s*(?:di\s*)?" + NUM, cl) or _cerca(NUM, cl)
             if m:
                 aperta = "sotto" if re.search(r"aperto\s+sotto|dal\s+basso", cl) else "nessuna" if re.search(r"chius", cl) else "sopra"
@@ -381,3 +425,7 @@ def da_disegno(entita, come, progetto=None, altezza=10, asse=None, angolo=360):
     prog["lavorazioni"] = nuovi + lavs
     prog["lavorazioni"].sort(key=lambda l: ORDINE.get(l.get("tipo"), 4))
     return prog
+
+
+def _fmt(v):
+    return ("%.3f" % float(v)).rstrip("0").rstrip(".").replace(".", ",")

@@ -22,7 +22,7 @@ h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:0 0 10px}h3{font-size:
 /* percorso guidato */
 .percorso{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:6px 0 22px}
 .passo{background:var(--carta);border-radius:12px;box-shadow:var(--ombra);padding:12px 14px;position:relative}
-.passo .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--blu);color:#fff;font-weight:800;font-size:13px;margin-right:6px}
+.passo{border-top:4px solid var(--c,var(--blu))}.passo .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--c,var(--blu));color:#fff;font-weight:800;font-size:13px;margin-right:6px}
 .passo b{font-size:14px}.passo p{margin:6px 0 0;color:var(--testo2);font-size:12.5px}
 .passo:not(:last-child)::after{content:"›";position:absolute;right:-9px;top:50%;transform:translateY(-50%);color:var(--testo2);font-size:22px;font-weight:700}
 /* pezzo aperto */
@@ -31,7 +31,8 @@ h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:0 0 10px}h3{font-size:
 .pezzo .icona svg{width:28px;height:28px}
 .pezzo .info{flex:1;min-width:220px}.pezzo .info b{font-size:16px}.pezzo .info div{color:var(--testo2);font-size:13px}
 /* tile */
-.gruppo{margin:0 0 26px}.gruppo h2{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.gruppo h2 small{font-weight:400;color:var(--testo2);font-size:13px}
+.gruppo{--c:var(--blu);margin:0 0 22px;padding:14px 16px 18px;border-radius:18px;background:linear-gradient(90deg,color-mix(in srgb,var(--c) 9%,transparent),transparent 70%);border-left:6px solid var(--c)}
+.gruppo h2{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;color:var(--c)}.gruppo h2 small{font-weight:400;color:var(--testo2);font-size:13px}
 .tiles{display:flex;flex-wrap:wrap;gap:16px}
 .tile{width:184px;height:184px;background:var(--carta);border-radius:16px;box-shadow:var(--ombra);padding:14px 14px 12px;display:flex;flex-direction:column;text-decoration:none;color:var(--testo);transition:box-shadow .15s,transform .15s;position:relative}
 .tile:hover,.tile:focus-visible{box-shadow:var(--ombra2);transform:translateY(-2px);outline:none}
@@ -39,8 +40,9 @@ h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:0 0 10px}h3{font-size:
 .tile .t{font-weight:700;font-size:15px;line-height:1.25}
 .tile .s{color:var(--testo2);font-size:12.5px;margin-top:6px;line-height:1.35;flex:1;overflow:hidden}
 .tile .piede{display:flex;align-items:flex-end;justify-content:space-between;gap:6px}
-.tile .piede svg{width:30px;height:30px;color:var(--blu);flex:none}
-.tile .kpi{color:var(--blu);font-size:13px;font-weight:700;text-align:right;line-height:1.15}
+.tile .piede svg{width:30px;height:30px;color:var(--c,var(--blu));flex:none}
+.tile .kpi{color:var(--c,var(--blu));font-size:13px;font-weight:700;text-align:right;line-height:1.15}
+.gruppo .tile{border-top:5px solid var(--c)}.gruppo .tile:focus-visible{box-shadow:0 0 0 2px var(--c),var(--ombra2)}
 .tile .kpi big{display:block;font-size:26px;font-weight:300}
 .tile.vuoto .kpi{color:var(--testo2);font-weight:400}
 /* pagine oggetto */
@@ -78,3 +80,6 @@ pre.codice{background:#0f1b2b;color:#cfe6ff;border-radius:10px;padding:12px;max-
 @media(max-width:900px){.percorso{grid-template-columns:1fr 1fr}.passo::after{display:none}.griglia{grid-template-columns:1fr}}
 @media(max-width:520px){.tile{width:calc(50% - 8px);height:168px}.tile .s{font-size:12px}.shell .titolo{display:none}.percorso{grid-template-columns:1fr}.due{grid-template-columns:1fr}}
 @media print{.shell,.azioni,.no-stampa,#pezzo{display:none!important}.griglia{display:block}body,html{background:#fff}.carta{box-shadow:none;border:1px solid #ccc}main.pagina{padding:0}}
+.shell a.aiuto{border-radius:50%;width:32px;height:32px;padding:0;display:inline-grid;place-items:center;font-weight:800}
+.manuale h2{scroll-margin-top:70px;border-bottom:3px solid var(--c,var(--blu));padding-bottom:4px;margin-top:6px}.manuale .carta{border-left:6px solid var(--c,var(--blu))}
+.manuale code{background:#eef1f4;border-radius:4px;padding:1px 5px;font-size:13px}.indice{columns:3;font-size:13.5px}@media(max-width:800px){.indice{columns:1}}

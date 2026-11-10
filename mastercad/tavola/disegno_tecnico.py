@@ -125,7 +125,7 @@ def _viti(an):
     inv = {v: k for k, v in L.PASSAGGIO.items()}
     righe = {}
     for f in an["fori"]:
-        if f["filetto"] or not f["lamatura"] or not f["passante"]:
+        if f["filetto"] or not f["lamatura"] or not f["passante"] or f["lamatura"].get("tolleranza") or (f.get("funzione") or {}).get("tipo") == "sede_cuscinetto":
             continue
         m = inv.get(round(f["d"], 1)) or inv.get(f["d"])
         if not m:
@@ -160,12 +160,20 @@ def genera(an, info):
     t.pl([(20, FH / 2), (15, FH / 2)], "sottile")
     t.pl([(FW - 10, FH / 2), (FW - 5, FH / 2)], "sottile")
 
-    # ── scala ──
+    # ── impaginazione: piastre (sottili, con fori) → frontale in sezione + pianta, più grandi; altrimenti 3 viste ──
+    cavita = an["fori"] or an["tasche"] or an["guscio"]
+    piatto = bool(cavita) and H <= 0.35 * min(W, D)
     area_w, area_h = 262.0, 205.0
-    s_max = min((area_w - 2.5 * SPAZIO) / max(W + D, 1), (area_h - 2.5 * SPAZIO) / max(H + D, 1))
+    if piatto:
+        s_max = min((area_w - 2 * SPAZIO) / max(W, 1), (area_h - 2.5 * SPAZIO) / max(H + D, 1))
+    else:
+        s_max = min((area_w - 2.5 * SPAZIO) / max(W + D, 1), (area_h - 2.5 * SPAZIO) / max(H + D, 1))
     scala, scala_txt = next(((v, n) for v, n in SCALE if v <= s_max), SCALE[-1])
     s = scala
-    xL = 24 + SPAZIO + (area_w - 2 * SPAZIO - (W + D) * s - SPAZIO) / 2
+    if piatto:
+        xL = 24 + SPAZIO + (area_w - 2 * SPAZIO - W * s) / 2
+    else:
+        xL = 24 + SPAZIO + (area_w - 2 * SPAZIO - (W + D) * s - SPAZIO) / 2
     yF = FH - 14 - SPAZIO * 0.5 - H * s
     yT = yF - SPAZIO - D * s
     xS = xL + W * s + SPAZIO
@@ -173,58 +181,76 @@ def genera(an, info):
     def mappa(x0, y0, u0, v0):
         return lambda pts: [(x0 + (u - u0) * s, y0 + (v - v0) * s) for u, v in pts]
 
-    # vista frontale (da -Y): u = X, v = Z
-    fr = _proietta(sol, (0, -1, 0), (1, 0, 0))
-    mf = mappa(xL, yF, ing["xmin"], ing["zmin"])
-    for pl in fr["nasc"]:
-        t.pl(mf(pl), "nasc")
-    for pl in fr["vis"]:
-        t.pl(mf(pl), "vis")
-    # vista dall'alto (sotto la frontale): u = X, v = Y
-    al = _proietta(sol, (0, 0, 1), (1, 0, 0))
-    ma = mappa(xL, yT, ing["xmin"], ing["ymin"])
-    for pl in al["nasc"]:
-        t.pl(ma(pl), "nasc")
-    for pl in al["vis"]:
-        t.pl(ma(pl), "vis")
-    # vista da sinistra (a destra della frontale) oppure sezione A-A se ci sono fori o cavità
-    cavita = an["fori"] or an["tasche"] or an["guscio"]
-    ms = mappa(xS, yF, -ing["ymax"], ing["zmin"])
-    xc = None
-    if cavita:
-        cx = (ing["xmin"] + ing["xmax"]) / 2
-        candidati = [f["x"] for f in an["fori"]] or [cx]
-        xc = min(candidati, key=lambda x: abs(x - cx))
-        xc = min(max(xc, ing["xmin"] + 0.01), ing["xmax"] - 0.01)
-        tenuto = sol.intersect(cq.Solid.makeBox(ing["xmax"] - xc + 1, D + 2, H + 2, cq.Vector(xc, ing["ymin"] - 1, ing["zmin"] - 1)))
-        se = _proietta(tenuto, (-1, 0, 0), (0, -1, 0))
+    def facce_tagliate(tenuto, asse, quota, proietta2d, mappa_):
         for f in tenuto.Faces():
             try:
                 c = f.Center()
                 nrm = f.normalAt(c)
             except Exception:
                 continue
-            if abs(c.x - xc) < 1e-4 and nrm.x < -0.99:
+            if abs(getattr(c, asse) - quota) < 1e-4 and getattr(nrm, asse) < -0.99:
                 anelli = []
                 for w in [f.outerWire()] + f.innerWires():
                     pts = []
                     for e in w.Edges():
-                        pts += [(-p.y, p.z) for p in ([e.startPoint(), e.endPoint()] if e.geomType() == "LINE"
-                                                     else e.positions([i / 24 for i in range(25)]))]
-                    anelli.append(ms(pts))
+                        pts += [proietta2d(p) for p in ([e.startPoint(), e.endPoint()] if e.geomType() == "LINE" else e.positions([i / 24 for i in range(25)]))]
+                    anelli.append(mappa_(pts))
                 for ln in tratteggio(anelli):
                     t.pl(ln, "sez")
+
+    def marca_sezione(p1, p2, ang_freccia):
+        """Traccia del piano di sezione con le frecce nel verso di osservazione e le lettere A."""
+        t.pl([p1, p2], "asse")
+        a = math.radians(ang_freccia)
+        for p in (p1, p2):
+            q = (p[0] + 6 * math.cos(a), p[1] + 6 * math.sin(a))
+            t.pl([p, q], "vis")
+            t.freccia((q[0] + math.cos(a), q[1] + math.sin(a)), ang_freccia)
+            t.tx((p[0] - 2.5, p[1] - 4.5), "A", 4, "end")
+
+    mf = mappa(xL, yF, ing["xmin"], ing["zmin"])
+    ma = mappa(xL, yT, ing["xmin"], ing["ymin"])
+    ms = mappa(xS, yF, -ing["ymax"], ing["zmin"])
+    xc = yc = None
+    if piatto:
+        # frontale in sezione A-A sul piano che passa per i fori più vicini al centro
+        cy = (ing["ymin"] + ing["ymax"]) / 2
+        yc = min([f["y"] for f in an["fori"]] or [cy], key=lambda y: abs(y - cy))
+        yc = min(max(yc, ing["ymin"] + 0.01), ing["ymax"] - 0.01)
+        tenuto = sol.intersect(cq.Solid.makeBox(W + 2, ing["ymax"] - yc + 1, H + 2, cq.Vector(ing["xmin"] - 1, yc, ing["zmin"] - 1)))
+        fr = _proietta(tenuto, (0, -1, 0), (1, 0, 0))
+        facce_tagliate(tenuto, "y", yc, lambda p: (p.x, p.z), mf)
+        for pl in fr["vis"]:
+            t.pl(mf(pl), "vis")
+        t.tx((xL + W * s / 2, yF + H * s + 6), "SEZIONE A-A", 3.5, "middle")
+    else:
+        fr = _proietta(sol, (0, -1, 0), (1, 0, 0))
+        for pl in fr["nasc"]:
+            t.pl(mf(pl), "nasc")
+        for pl in fr["vis"]:
+            t.pl(mf(pl), "vis")
+    # vista dall'alto (sotto la frontale): u = X, v = Y
+    al = _proietta(sol, (0, 0, 1), (1, 0, 0))
+    for pl in al["nasc"]:
+        t.pl(ma(pl), "nasc")
+    for pl in al["vis"]:
+        t.pl(ma(pl), "vis")
+    if piatto:
+        ya = yT + (yc - ing["ymin"]) * s
+        marca_sezione((xL - 8, ya), (xL + W * s + 8, ya), 90)
+    elif cavita:
+        # vista da sinistra in sezione A-A sul piano che passa per i fori più vicini al centro
+        cx = (ing["xmin"] + ing["xmax"]) / 2
+        xc = min([f["x"] for f in an["fori"]] or [cx], key=lambda x: abs(x - cx))
+        xc = min(max(xc, ing["xmin"] + 0.01), ing["xmax"] - 0.01)
+        tenuto = sol.intersect(cq.Solid.makeBox(ing["xmax"] - xc + 1, D + 2, H + 2, cq.Vector(xc, ing["ymin"] - 1, ing["zmin"] - 1)))
+        se = _proietta(tenuto, (-1, 0, 0), (0, -1, 0))
+        facce_tagliate(tenuto, "x", xc, lambda p: (-p.y, p.z), ms)
         for pl in se["vis"]:
             t.pl(ms(pl), "vis")
         t.tx((xS + D * s / 2, yF + H * s + 6), "SEZIONE A-A", 3.5, "middle")
-        # traccia del piano di sezione nella vista dall'alto
         xa = xL + (xc - ing["xmin"]) * s
-        t.pl([(xa, yT - 6), (xa, yT + D * s + 6)], "asse")
-        for y_, sgn in ((yT - 6, -1), (yT + D * s + 6, 1)):
-            t.pl([(xa - 0.1, y_), (xa, y_)], "vis")
-            t.pl([(xa, y_), (xa + 6, y_)], "vis")
-            t.freccia((xa + 7, y_), 0)
-            t.tx((xa - 2, y_ + (1 if sgn > 0 else -4.5)), "A", 4, "end")
+        marca_sezione((xa, yT - 8), (xa, yT + D * s + 8), 0)
     else:
         la = _proietta(sol, (-1, 0, 0), (0, -1, 0))
         for pl in la["nasc"]:
@@ -297,7 +323,7 @@ def genera(an, info):
     if an["fori"]:
         t.tx((300, y), "TABELLA FORI (quote dallo zero 0,0)", 3, "start", 0, "testo")
         y -= 3
-        righe = [(str(f["rif"]), _num(f["x"]), _num(f["y"]), descrivi_foro(f)) for f in an["fori"]]
+        righe = [(str(f["rif"]), _num(f["x"]), _num(f["y"]), descrivi_foro(f, True)) for f in an["fori"]]
         if len(righe) > 22:
             righe = [("%d–%d" % (g[0]["rif"], g[-1]["rif"]) if len(g) > 1 else str(g[0]["rif"]), "", "", "%d× %s" % (len(g), descrivi_foro(g[0])))
                      for g in gruppi_fori(an["fori"])]
@@ -309,7 +335,8 @@ def genera(an, info):
         t.pl([(300, y), (FW - 12, y)], "sottile")
         for r in righe[:24]:
             desc = r[3]
-            parti = [desc] if len(desc) <= 36 else [desc[:desc.rfind(",", 0, 37) + 1 or 36], desc[desc.rfind(",", 0, 37) + 2 or 36:]]
+            taglio = max(desc.rfind(", ", 0, 37), desc.rfind(" — ", 0, 37))
+            parti = [desc] if len(desc) <= 36 else ([desc[:taglio + 1], desc[taglio + 1:].lstrip(" —,")] if taglio > 0 else [desc[:36], desc[36:]])
             for k, p in enumerate(parti):
                 if k == 0:
                     for c_, v in zip(col[:3], r[:3]):
@@ -384,8 +411,8 @@ def genera(an, info):
         t.tx((a + 2, b + 1.8), val[:60] if h <= 3.5 else val[:40], h, "start", 0, "testo")
     t.tx((x0, y1 + 2), "MASTER CAD AI · disegno generato dal modello 3D — verificare prima della produzione", 2.2, "start", 0, "sottile")
     return {"primitive": t.prim, "scala": scala_txt, "massa_kg": round(massa, 3), "viti": viti, "note": note,
-            "tabella_fori": [{"rif": f["rif"], "x": round(f["x"], 3), "y": round(f["y"], 3), "descrizione": descrivi_foro(f)} for f in an["fori"]],
-            "sezione": xc is not None}
+            "tabella_fori": [{"rif": f["rif"], "x": round(f["x"], 3), "y": round(f["y"], 3), "descrizione": descrivi_foro(f, True)} for f in an["fori"]],
+            "sezione": xc is not None or yc is not None}
 
 
 # ── scrittori ──

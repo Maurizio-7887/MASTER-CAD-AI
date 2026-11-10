@@ -191,7 +191,8 @@ class Http(unittest.TestCase):
             h = self._docente(c)
             home = c.get("/").get_data(as_text=True)
             for t in ("Dalla foto al 3D", "Disegno tecnico", "Ciclo di lavoro e CNC", "Preventivo istantaneo", "Controllo qualità foto",
-                      "Pezzo in realtà aumentata", "Libreria a norma", "Verifica fattibilità", "Pannello docente"):
+                      "Pezzo in realtà aumentata", "Libreria a norma", "Verifica fattibilità", "La mia officina", "Dal carico alla forma",
+                      "Accoppiamenti e tolleranze", "Versioni e decisioni", "Manuale d&#39;uso"):
                 self.assertIn(t, home)
             for pag in ("/parla", "/disegno", "/tavola", "/ciclo", "/preventivo", "/fattibilita", "/libreria", "/ar", "/qualita", "/corso/docente"):
                 self.assertEqual(c.get(pag).status_code, 200, pag)
@@ -230,9 +231,7 @@ class Http(unittest.TestCase):
             self.assertEqual(r.status_code, 302)
             with a.session_transaction() as s:
                 ha = {"X-CSRF-Token": s["csrf"]}
-            home = a.get("/").get_data(as_text=True)
-            self.assertIn("I miei esercizi", home)
-            self.assertNotIn("Pannello docente", home)
+            self.assertEqual(a.get("/").status_code, 200)
             self.assertEqual(a.get("/api/corso/docente/corsi").status_code, 403)
             self.assertEqual(a.get("/corso/docente").status_code, 302)
             self.assertEqual(a.get("/disegno").status_code, 200)

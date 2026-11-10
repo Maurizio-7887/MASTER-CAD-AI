@@ -20,7 +20,7 @@ def _dist_bordo(facce, x, y):
     return min(v.distance(f.outerWire()) for f in facce)
 
 
-def verifica(an):
+def verifica(an, officina=None):
     avvisi = []
 
     def add(livello, dove, testo, rimedio):
@@ -45,8 +45,26 @@ def verifica(an):
                 add("attenzione", dove, "Parete fra foro e bordo di soli %s mm: si deforma in foratura e sotto carico." % _num(parete),
                     "Lascia almeno %s mm (metà del diametro, minimo %s mm)." % (_num(minimo), _num(MIN_PARETE_METALLO)))
         if f["lamatura"] and float(f["lamatura"]["prof"]) >= f["spessore"] - 1.0:
-            add("errore", dove, "La lamatura è profonda %s mm su uno spessore di %s mm: sotto la testa della vite non resta materiale." % (
-                _num(f["lamatura"]["prof"]), _num(f["spessore"])), "Usa una vite a testa ribassata (ISO 7380) o aumenta lo spessore.")
+            if f["lamatura"].get("tolleranza"):
+                add("errore", dove, "La sede è profonda %s mm su uno spessore di %s mm: non resta lo spallamento che tiene il cuscinetto." % (
+                    _num(f["lamatura"]["prof"]), _num(f["spessore"])), "Aumenta lo spessore di almeno %s mm o usa una sede cieca con anello elastico." % _num(float(f["lamatura"]["prof"]) + 3 - f["spessore"]))
+            else:
+                add("errore", dove, "La lamatura è profonda %s mm su uno spessore di %s mm: sotto la testa della vite non resta materiale." % (
+                    _num(f["lamatura"]["prof"]), _num(f["spessore"])), "Usa una vite a testa ribassata (ISO 7380) o aumenta lo spessore.")
+        # tolleranze: quanto costano e cosa servono
+        for d_, sig in ((f["d"], f["tolleranza"]), (float((f["lamatura"] or {}).get("d") or 0), (f["lamatura"] or {}).get("tolleranza"))):
+            if not sig:
+                continue
+            grado = int("".join(c for c in sig if c.isdigit()) or 7)
+            if grado <= 6:
+                add("attenzione", dove, "Tolleranza %s (IT%d) su Ø%s: serve rettifica interna o barenatura fine, costosa." % (sig, grado, _num(d_)),
+                    "Se l'accoppiamento lo permette usa IT7 (es. H7): costa molto meno.")
+        fz = f.get("funzione") or {}
+        if fz.get("tipo") == "foro_spina":
+            presa = f["prof"] if not f["passante"] else f["spessore"]
+            if presa < 1.5 * f["d"]:
+                add("attenzione", dove, "La spina entra solo per %s mm (meno di 1,5 volte il diametro): centra poco." % _num(presa),
+                    "Porta la presa ad almeno %s mm o usa una spina più piccola." % _num(1.5 * f["d"]))
         if not f["passante"] and f["prof"] > 10 * f["d_punta"]:
             add("attenzione", dove, "Foro cieco molto profondo (%s volte il diametro): serve punta lunga e scarico truciolo." % _num(f["prof"] / f["d_punta"]),
                 "Se possibile fallo passante o riduci la profondità.")
@@ -115,6 +133,15 @@ def verifica(an):
     if an["guscio"] and an["guscio"]["spessore"] < 1.5:
         add("attenzione", "Guscio", "Pareti di %s mm: lavorandole si deformano e vibrano." % _num(an["guscio"]["spessore"]),
             "Per pezzi lavorati di macchina resta sopra 1,5–2 mm; sotto, pensa a lamiera piegata.")
+    if officina:
+        from ..officina import scegli_macchina
+        from ..progetto.analisi import grezzo
+        g = grezzo(an)
+        tipo = "tornio" if an["base"].get("tipo") == "rivoluzione" else "fresa"
+        mac = scegli_macchina(officina, tipo, (g["y"], g["x"]) if tipo == "tornio" else (g["x"], g["y"], g["z"]))
+        if not mac.get("interna"):
+            add("attenzione", "Officina", "Nessuna macchina interna adatta: %s." % (mac.get("motivo") or ""),
+                "La lavorazione va a «%s»%s: controlla tempi di consegna e costi." % (mac["nome"].replace("Terzista: ", ""), " (circa %d giorni)" % mac["giorni"] if mac.get("giorni") else ""))
     ing = an["ingombro"]
     if min(ing["x"], ing["y"], ing["z"]) < 1.0:
         add("attenzione", "Pezzo", "Uno spessore sotto 1 mm: difficile da bloccare in macchina.", "Valuta il taglio laser da lamiera.")

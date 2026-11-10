@@ -74,7 +74,7 @@ def analizza(progetto):
                     "d": d_nom, "d_punta": d_punta, "filetto": filetto, "passo": PASSO.get(filetto) if filetto else None,
                     "passante": _passante(f) or prof >= spess - 1e-6, "prof": prof, "spessore": spess,
                     "lamatura": f.get("lamatura"), "svasatura": f.get("svasatura"), "tolleranza": f.get("tolleranza"),
-                    "da_sotto": sotto, "z_faccia": zbot if sotto else ztop})
+                    "da_sotto": sotto, "z_faccia": zbot if sotto else ztop, "funzione": lav.get("funzione")})
         elif tipo in ("tasca", "asola", "rialzo"):
             l2 = dict(lav, forma="asola") if tipo == "asola" else dict(lav)
             try:
@@ -131,11 +131,27 @@ def gruppi_fori(fori):
     return list(gruppi.values())
 
 
-def descrivi_foro(f):
+def descrivi_foro(f, limiti=False):
+    from ..tolleranze.iso286 import limiti as lim286
+
+    def tol(d, sig):
+        if not sig:
+            return ""
+        if not limiti:
+            return " " + sig
+        try:
+            x = lim286(d, sig)
+            return " %s (%s/%s)" % (sig, _dev(x["sup_um"]), _dev(x["inf_um"]))
+        except ValueError:
+            return " " + sig
     t = f["filetto"] + (" passante" if f["passante"] else " prof. %s" % _num(f["prof"])) if f["filetto"] else \
-        "Ø" + _num(f["d"]) + (" " + f["tolleranza"] if f["tolleranza"] else "") + (" passante" if f["passante"] else " prof. %s" % _num(f["prof"]))
+        "Ø" + _num(f["d"]) + tol(f["d"], f["tolleranza"]) + (" passante" if f["passante"] else " prof. %s" % _num(f["prof"]))
     if f["lamatura"]:
-        t += ", lamatura Ø%s×%s" % (_num(f["lamatura"]["d"]), _num(f["lamatura"]["prof"]))
+        lt = f["lamatura"].get("tolleranza")
+        t += ", %s Ø%s%s×%s" % ("sede" if lt else "lamatura", _num(f["lamatura"]["d"]), tol(f["lamatura"]["d"], lt), _num(f["lamatura"]["prof"]))
+    fz = f.get("funzione") or {}
+    if fz.get("componente") and fz.get("tipo") in ("sede_cuscinetto", "sede_boccola", "foro_spina"):
+        t += " — " + {"sede_cuscinetto": "cuscinetto ", "sede_boccola": "", "foro_spina": ""}[fz["tipo"]] + str(fz["componente"])
     if f["svasatura"]:
         t += ", svasatura Ø%s a %s°" % (_num(f["svasatura"]["d"]), _num(f["svasatura"].get("angolo", 90)))
     if f["da_sotto"]:
@@ -165,3 +181,9 @@ def grezzo(an):
     z = next((s for s in spessori if s >= i["z"] + 1.5), math.ceil(i["z"] + 5))
     return {"forma": "piatto" if z <= 30 else "blocco", "descrizione": "%s %s × %s × %d mm (sovrametallo 3 mm per lato)" % (
         "Piatto" if z <= 30 else "Blocco", _num(x), _num(y), z), "volume": x * y * z, "sezione": min(x, y) * z, "x": x, "y": y, "z": z}
+
+
+def _dev(um):
+    if abs(um) < 1e-9:
+        return "0"
+    return ("+" if um > 0 else "-") + ("%.3f" % (abs(um) / 1000)).rstrip("0").rstrip(".").replace(".", ",")

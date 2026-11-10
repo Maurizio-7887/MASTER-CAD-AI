@@ -4,6 +4,7 @@ import threading
 from flask import Blueprint, current_app, jsonify, render_template, request, session
 
 from ..progetto.analisi import analizza
+from ..officina import leggi as leggi_officina
 from .regole import verifica
 
 bp = Blueprint("fattibilita", __name__, template_folder="templates", static_folder="static", static_url_path="/fattibilita/static")
@@ -23,7 +24,7 @@ def api():
     try:
         with _LOCK:
             an = analizza(dati.get("progetto"))
-            return jsonify(verifica(an))
+            return jsonify(verifica(an, leggi_officina()))
     except (ValueError, TypeError, KeyError) as exc:
         return jsonify(error=str(exc)[:400]), 400
     except Exception:
