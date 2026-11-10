@@ -89,18 +89,68 @@
         '<tr><td>1</td><td><b>' + MC.esc(A.nome) + '</b></td><td>Assieme</td><td></td><td class="num">1</td><td class="num">' + MC.num(r.distinta.reduce(function (s, d) { return s + (d.massa_kg || 0) * d.quantita; }, 0), 2) + '</td></tr>' +
         r.distinta.map(function (d) { return '<tr><td>' + d.livello + '</td><td>' + MC.esc(d.descrizione) + '</td><td>' + MC.esc(d.tipo) + '</td><td>' + MC.esc(d.materiale || d.norma) + '</td><td class="num">' + d.quantita + '</td><td class="num">' + (d.massa_kg != null ? MC.num(d.massa_kg, 3) : '—') + '</td></tr>'; }).join('');
       var gen = r.componenti.filter(function (c) { return c.generato; });
-      $('generati').innerHTML = gen.length ? '<h3 style="margin-top:12px">Pezzi generati dal montaggio</h3>' + gen.map(function (c, i) { return '<p>' + MC.esc(c.nome) + ' <button class="btn sec" data-gen="' + i + '">Apri nel CAD (tavola, ciclo, preventivo)</button></p>'; }).join('') : '';
-      document.querySelectorAll('[data-gen]').forEach(function (x) { x.onclick = function () {
-        var c = gen[Number(x.getAttribute('data-gen'))], p = JSON.parse(JSON.stringify(c.progetto));
-        p.uid = nuovoId() + nuovoId(); p.registro = [{quando: new Date().toISOString(), chi: MC.leggi('mcad-utente') || 'Ufficio tecnico', cosa: 'Generato dal montaggio dell\'assieme «' + A.nome + '»', norma: (p.quote_funzionali || []).map(function (q) { return q.norma; }).join('; ')}];
-        if (MC.progetto() && !confirm('Il pezzo aperto verrà sostituito da «' + c.nome + '». Continuo?')) return;
-        MC.salvaProgetto(p); try { localStorage.removeItem('mcad-disegno'); } catch (e) {} location.href = '/disegno#costruisci'; }; });
+      $('generati').innerHTML = gen.length ? '<h3 style="margin-top:12px">Pezzi generati dal montaggio</h3>' + gen.map(function (c) { return '<p>' + MC.esc(c.nome) + ' <button class="btn sec" data-apri="' + MC.esc(c.id) + '">Apri nel CAD (tavola, ciclo, preventivo)</button></p>'; }).join('') : '';
+      gdt(r); istruzioni(r);
+      document.querySelectorAll('[data-apri]').forEach(function (x) { x.onclick = function () { apriNelCad(r.componenti.find(function (c) { return c.id === x.getAttribute('data-apri'); })); }; });
       var err = r.verifiche.filter(function (v) { return v.livello === 'errore'; }).length;
       MC.kpi('assiemi', err ? err : 'OK', err ? 'errori di montaggio' : 'montaggio verificato');
       MC.scriviLocale('mcad-assieme', A);
     } catch (e) { MC.messaggio($('msg'), e.message, 'err'); }
     finally { MC.occupato(b, false); }
   };
+  function apriNelCad(c) {
+    var p = JSON.parse(JSON.stringify(c.progetto_tollerato || c.progetto)), tg = c.tolleranze_geometriche;
+    p.uid = (!c.generato && c.progetto.uid) || nuovoId() + nuovoId();     // stesso pezzo, stessa storia delle versioni
+    p.nome = p.nome || c.nome;
+    var reg = p.registro || [];
+    reg.push({quando: new Date().toISOString(), chi: MC.leggi('mcad-utente') || 'Ufficio tecnico',
+      cosa: c.generato ? 'Generato dal montaggio dell\'assieme «' + A.nome + '»' : 'Tolleranze geometriche dedotte dall\'assieme «' + A.nome + '»' + (tg && tg.in_opera.length ? '; fori spina alesati in opera' : ''),
+      norma: c.generato ? (p.quote_funzionali || []).map(function (q) { return q.norma; }).join('; ') : 'ISO 1101, ISO 2692, ISO 10578'});
+    p.registro = reg;
+    if (MC.progetto() && !confirm('Il pezzo aperto verrà sostituito da «' + c.nome + '». Continuo?')) return;
+    MC.salvaProgetto(p); try { localStorage.removeItem('mcad-disegno'); } catch (e) {} location.href = '/disegno#costruisci';
+  }
+  var MOD = {M: 'Ⓜ', P: 'Ⓟ'};
+  function fcf(v) {
+    var val = (v.diametrale ? 'Ø' : '') + String(v.valore).replace('.', ',');
+    var m = v.modificatori || [];
+    if (m.length) val += ' ' + MOD[m[0]] + (m[1] != null ? ' ' + String(m[1]).replace('.', ',') : '');
+    return '<span class="fcf" title="' + MC.esc(v.nome) + '"><b>' + MC.esc(v.segno) + '</b><b>' + MC.esc(val) + '</b>' + (v.riferimenti || []).map(function (x) { return '<b>' + MC.esc(x) + '</b>'; }).join('') + '</span>';
+  }
+  function gdt(r) {
+    var con = r.componenti.filter(function (c) { return c.tolleranze_geometriche && c.tolleranze_geometriche.voci.length; });
+    $('gdt').hidden = !con.length;
+    $('gdt-pezzi').innerHTML = con.map(function (c) {
+      var t = c.tolleranze_geometriche;
+      return '<div class="gdt-p"><h3>' + MC.esc(c.nome) + ' <button class="btn sec" data-apri="' + MC.esc(c.id) + '">Apri nel CAD con le tolleranze</button></h3>' +
+        '<small>Riferimenti: ' + t.riferimenti.map(function (x) { return '<b>' + MC.esc(x.lettera) + '</b> = ' + MC.esc(x.elemento); }).join(' · ') + '</small>' +
+        (t.in_opera.length ? '<p class="messaggio" style="margin:6px 0">🔩 ' + MC.esc(t.in_opera[0].perche) + '</p>' : '') +
+        '<div class="scorri"><table class="dati"><tr><th>Riquadro</th><th>Elemento</th><th>Perché</th><th>Controllo</th><th>Officina</th></tr>' + t.voci.map(function (v) {
+          return '<tr><td>' + fcf(v) + '</td><td>' + MC.esc(v.elemento) + '</td><td><details><summary>perché</summary>' + MC.esc(v.perche) + ' <small>(' + MC.esc(v.norma) + ')</small></details></td><td>' + MC.esc(v.controllo) +
+            '</td><td>' + (v.ok_officina ? '<span class="stato ok">OK</span> <small>' + MC.esc(v.capacita.macchina) + '</small>' : '<span class="stato att">Attenzione</span> <small>' + MC.esc(v.consiglio || '') + '</small>') + '</td></tr>';
+        }).join('') + '</table></div></div>';
+    }).join('');
+  }
+  var montaggio = null;
+  function istruzioni(r, conferme) {
+    var ist = r.istruzioni; montaggio = r.montaggio;
+    $('istr').hidden = false;
+    $('m-qr').innerHTML = r.montaggio.qr; $('m-link').href = r.montaggio.link;
+    $('m-sintesi').textContent = ist.passi.length + ' passi · ' + MC.num(ist.tempo_min, 1) + ' min · costo montaggio ' + MC.num(ist.costo, 2) + ' € (banco ' + MC.num(ist.costo_banco_ora, 0) + ' €/h). ' + ist.nota;
+    var conf = conferme || [];
+    $('m-passi').innerHTML = ist.passi.map(function (p) {
+      var c = conf.filter(function (x) { return x.passo === p.n; }).pop();
+      return '<li><b>' + MC.esc(p.titolo) + '</b>' + (c ? ' <span class="stato ' + (c.esito === 'ok' ? 'ok">fatto' : 'ko">problema') + '</span> <small>' + MC.esc(c.operatore + ' · ' + c.quando.replace('T', ' ') + (c.nota ? ' · «' + c.nota + '»' : '')) + '</small>' : '') +
+        '<ul>' + p.azioni.map(function (a) { return '<li>' + MC.esc(a) + '</li>'; }).join('') + '</ul>' +
+        '<div class="meta">' + MC.num(p.tempo_min, 1) + ' min' + (p.attrezzi.length ? ' · 🔧 ' + MC.esc(p.attrezzi.join(' · ')) : '') + (p.controllo ? ' · ✔ ' + MC.esc(p.controllo) : '') + '</div></li>';
+    }).join('');
+  }
+  $('m-aggiorna').onclick = async function () {
+    if (!montaggio || !esito) return;
+    try { var r = await MC.api('/api/assiemi/montaggio/' + montaggio.token); istruzioni(esito, r.conferme); MC.messaggio($('msg'), r.conferme.length + ' conferme dal montatore.', 'ok'); }
+    catch (e) { MC.messaggio($('msg'), e.message, 'err'); }
+  };
+  $('m-stampa').onclick = function () { if (montaggio) window.open(montaggio.link, '_blank', 'noopener'); };
   $('v-normale').onclick = function () { if (esito) $('mv').setAttribute('src', esito.glb); };
   $('v-esploso').onclick = function () { if (esito) $('mv').setAttribute('src', esito.glb_esploso); };
   $('csv').onclick = function () {

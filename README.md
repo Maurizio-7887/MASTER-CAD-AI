@@ -19,6 +19,13 @@ Pagina **/disegno** (pulsante «📐 Disegno come AutoCAD» in alto):
 
 Codice: `mastercad/disegno/` (blueprint, pagina e motore comandi JS), `mastercad/reverse/` (blueprint e analisi della foto), `mastercad/profili.py` (dal 2D al solido CadQuery). Test: `tests/test_disegno_reverse.py`, `node tests/js/comandi.test.js`.
 
+## Novità: tolleranze geometriche dedotte e montaggio guidato
+
+Dal montaggio dell'assieme (`mastercad/assiemi/gdt.py`, `istruzioni.py`):
+- **Tolleranze geometriche ISO 1101 calcolate, non scritte a occhio**: posizione di passaggi e filetti dal gioco vite/foro (perno fisso T = H − F, Ⓜ e Ⓟ, calibro funzionale), spine con gioco minimo ≤ 0 → preforo e **alesatura in opera** (il ciclo toglie l'alesatura dal pezzo, la tavola lo scrive), sedi cuscinetto (IT6/2, IT6, perpendicolarità dal disallineamento ammesso), albero (IT5/2, IT5). Ogni valore ha perché, norma, strumento di controllo ed è confrontato con la **precisione delle macchine** della tua officina. Riquadri disegnati in tavola (SVG/PDF/DXF) e voci nel piano di controllo.
+- **Istruzioni di montaggio**: sequenza, coppie di serraggio 8.8 (VDI 2230) in due passate a croce, cuscinetto a pressa o a caldo con la temperatura dall'interferenza, controlli, tempo e costo al banco.
+- **Montaggio guidato sul telefono** (`/assiemi/m/<token>`, link segreto senza login): un passo alla volta con il 3D (pezzi del passo in arancio, anche in AR) e le conferme «fatto/problema» del montatore, visibili in ufficio.
+
 ## Novità: assiemi con lo scopo
 
 `/assiemi` (`mastercad/assiemi/`): i pezzi si montano da soli in base allo scopo dei loro fori. Il programma prova 4 rotazioni e il ribaltamento per allineare **fori spina** uguali (o passaggi vite sopra filetti), appoggia il pezzo sopra l'altro, mette **spine ISO 8734** e **viti ISO 4762** della lunghezza giusta (presa, avvitamento 1,5 d in acciaio / 2 d in alluminio, fondo del filetto) e, per ogni **sede cuscinetto**, il cuscinetto ISO 15 e un **albero generato** con il tratto k5 sotto l'anello interno e lo spallamento. Verifiche: giochi e interferenze degli anelli (tolleranze ISO 492 classe normale + ISO 286), presa delle spine, gioco dell'albero nel passaggio, collisioni fra tutti i componenti. Distinta base su più livelli (CSV), vista montata ed esplosa, AR con QR. L'albero generato si apre nel CAD: in tavola compare «Ø20 k5 (+0,011/+0,002)», nel ciclo la rettifica (o il terzista rettifiche), nel controllo l'anello P/NP. Test: `tests/test_assiemi.py`.

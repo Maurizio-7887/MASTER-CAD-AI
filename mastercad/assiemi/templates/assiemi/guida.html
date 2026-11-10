@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ nome }} · Montaggio guidato</title>
+<script src="{{ url_for('ar.static', filename='vendor/model-viewer-umd.min.js') }}"></script>
+<style>
+:root{--blu:#0a6ed1;--scuro:#12324f;--ok:#107e3e;--ko:#bb0000;--bordo:#d9dee3}
+*{box-sizing:border-box}html,body{margin:0;background:#eef1f4;font:16px system-ui,-apple-system,"Segoe UI",sans-serif;color:#1d2d3e}
+header{background:var(--scuro);color:#fff;padding:12px 16px;position:sticky;top:0;z-index:2}
+header b{display:block;font-size:17px}header small{opacity:.85}
+.barra{height:6px;background:#2c4f70;border-radius:3px;margin-top:8px;overflow:hidden}.barra i{display:block;height:100%;background:#5dd28b;width:0;transition:width .3s}
+main{max-width:760px;margin:0 auto;padding:12px 16px 90px}
+.carta{background:#fff;border:1px solid var(--bordo);border-radius:12px;padding:14px;margin-bottom:12px}
+h2{margin:0 0 6px;font-size:19px}.n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--blu);color:#fff;font-weight:700;margin-right:8px}
+model-viewer{width:100%;height:42vh;min-height:240px;background:radial-gradient(circle at 50% 35%,#fff,#dfe5ea);border-radius:10px}
+ol{padding-left:22px;margin:10px 0}ol li{margin:7px 0;line-height:1.4}
+.meta{font-size:14px;color:#556b82;margin:6px 0}.controllo{background:#fff8e6;border-left:4px solid #e9730c;padding:8px 10px;border-radius:6px;font-size:15px}
+.azioni{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--bordo);padding:10px 16px;display:flex;gap:8px;z-index:2}
+button{font:700 16px system-ui;border:0;border-radius:10px;padding:14px 12px;cursor:pointer}
+.ok{background:var(--ok);color:#fff;flex:2}.ko{background:#fff;color:var(--ko);border:2px solid var(--ko);flex:1}.sec{background:#e5eaf0;color:#1d2d3e;flex:0 0 52px}
+input,textarea{font:inherit;width:100%;padding:10px;border:1px solid #9fb0c0;border-radius:8px}
+.elenco div{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #eef0f2;cursor:pointer;font-size:15px}
+.st{font-size:13px;border-radius:10px;padding:2px 8px;white-space:nowrap}.st.f{background:#e7f6ec;color:var(--ok)}.st.p{background:#ffebeb;color:var(--ko)}.st.a{background:#eef1f4;color:#556b82}
+#ar{position:absolute;bottom:10px;right:10px;background:var(--blu);color:#fff;border-radius:20px;padding:9px 14px;font-size:14px}
+.err{color:var(--ko)}
+@media print{header,.azioni,model-viewer,.elenco{display:none}.carta{break-inside:avoid;border:0}}
+</style></head><body>
+<header><b>{{ nome }}</b><small id="stato">Montaggio guidato · MASTER CAD AI</small><div class="barra"><i id="barra"></i></div></header>
+<main>
+  <section class="carta"><label>Montatore<input id="op" placeholder="Il tuo nome" autocomplete="name"></label></section>
+  <section class="carta" id="passo"><p>Carico le istruzioni…</p></section>
+  <section class="carta"><h2>Tutti i passi</h2><div class="elenco" id="elenco"></div><p class="meta" id="tempo"></p></section>
+</main>
+<div class="azioni"><button class="sec" id="prec" aria-label="Passo precedente">◀</button><button class="ko" id="problema">⚠ Problema</button><button class="ok" id="fatto">✔ Fatto</button><button class="sec" id="succ" aria-label="Passo successivo">▶</button></div>
+<script>
+(function () {
+  'use strict';
+  var base = '/assiemi/m/{{ token }}', D = null, cur = 0, conferme = [];
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); };
+  try { $('op').value = localStorage.getItem('mcad-montatore') || ''; } catch (e) {}
+  $('op').onchange = function () { try { localStorage.setItem('mcad-montatore', this.value.trim()); } catch (e) {} };
+  function ultima(n) { var c = conferme.filter(function (x) { return x.passo === n; }); return c[c.length - 1]; }
+  function mostra() {
+    var passi = D.istruzioni.passi, p = passi[cur], u = ultima(p.n);
+    $('passo').innerHTML = '<h2><span class="n">' + p.n + '</span>' + esc(p.titolo) + '</h2>' +
+      (p.glb ? '<model-viewer src="' + esc(p.glb) + '" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="pan-y" shadow-intensity="1" exposure="1.05" alt="Passo ' + p.n + '"><button slot="ar-button" id="ar">📱 Sul banco</button></model-viewer>' +
+        '<p class="meta">In arancio i pezzi di questo passo.</p>' : '') +
+      '<ol>' + p.azioni.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ol>' +
+      (p.attrezzi.length ? '<p class="meta">🔧 ' + esc(p.attrezzi.join(' · ')) + '</p>' : '') +
+      (p.controllo ? '<p class="controllo">✔ Controllo: ' + esc(p.controllo) + '</p>' : '') +
+      '<p class="meta">Tempo standard: ' + String(p.tempo_min).replace('.', ',') + ' min' + (u ? ' · ' + (u.esito === 'ok' ? 'fatto' : 'problema') + ' da ' + esc(u.operatore) + ' il ' + esc(u.quando.replace('T', ' alle ')) + (u.nota ? ' — «' + esc(u.nota) + '»' : '') : '') + '</p>' +
+      '<p class="err" id="errore"></p>';
+    var fatti = passi.filter(function (q) { var x = ultima(q.n); return x && x.esito === 'ok'; }).length;
+    $('barra').style.width = Math.round(100 * fatti / passi.length) + '%';
+    $('stato').textContent = 'Passo ' + p.n + ' di ' + passi.length + ' · ' + fatti + ' fatti';
+    $('elenco').innerHTML = passi.map(function (q, i) {
+      var x = ultima(q.n), st = x ? (x.esito === 'ok' ? '<span class="st f">fatto</span>' : '<span class="st p">problema</span>') : '<span class="st a">da fare</span>';
+      return '<div data-i="' + i + '"' + (i === cur ? ' style="font-weight:700"' : '') + '><span class="n" style="width:24px;height:24px;font-size:13px">' + q.n + '</span><span style="flex:1">' + esc(q.titolo) + '</span>' + st + '</div>';
+    }).join('');
+    document.querySelectorAll('#elenco [data-i]').forEach(function (x) { x.onclick = function () { cur = Number(x.getAttribute('data-i')); mostra(); window.scrollTo(0, 0); }; });
+    $('tempo').textContent = 'Tempo totale stimato ' + String(D.istruzioni.tempo_min).replace('.', ',') + ' min. ' + D.istruzioni.nota;
+    $('prec').disabled = cur === 0; $('succ').disabled = cur === passi.length - 1;
+  }
+  async function conferma(esito) {
+    var op = $('op').value.trim();
+    if (!op) { $('errore').textContent = 'Scrivi il tuo nome in alto.'; $('op').focus(); return; }
+    var nota = '';
+    if (esito === 'problema') { nota = prompt('Che problema c\'è?') || ''; if (!nota) return; }
+    try {
+      var r = await fetch(base + '/conferma', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({passo: D.istruzioni.passi[cur].n, operatore: op, esito: esito, nota: nota})});
+      var j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Errore');
+      conferme = j.conferme;
+      if (esito === 'ok' && cur < D.istruzioni.passi.length - 1) cur++;
+      mostra(); window.scrollTo(0, 0);
+    } catch (e) { $('errore').textContent = e.message; }
+  }
+  $('fatto').onclick = function () { conferma('ok'); };
+  $('problema').onclick = function () { conferma('problema'); };
+  $('prec').onclick = function () { if (cur > 0) { cur--; mostra(); } };
+  $('succ').onclick = function () { if (cur < D.istruzioni.passi.length - 1) { cur++; mostra(); } };
+  fetch(base + '/dati').then(function (r) { return r.json(); }).then(function (j) {
+    D = j; conferme = j.conferme || [];
+    var passi = D.istruzioni.passi, primo = passi.findIndex(function (q) { var x = ultima(q.n); return !x || x.esito !== 'ok'; });
+    cur = primo < 0 ? passi.length - 1 : primo; mostra();
+  }).catch(function () { $('passo').innerHTML = '<p class="err">Montaggio non trovato.</p>'; });
+})();
+</script>
+</body></html>

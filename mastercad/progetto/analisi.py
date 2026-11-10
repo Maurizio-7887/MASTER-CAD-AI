@@ -49,7 +49,8 @@ def analizza(progetto):
                         "xmax": bb.xmax, "ymax": bb.ymax, "zmax": bb.zmax},
            "volume": solido.Volume(), "volume_pieno": pieno.Volume(),
            "fori": [], "tasche": [], "rialzi": [], "spigoli": [], "guscio": None, "saltate": [],
-           "quote_funzionali": [q for q in (progetto.get("quote_funzionali") or []) if isinstance(q, dict) and q.get("diametro")]}
+           "quote_funzionali": [q for q in (progetto.get("quote_funzionali") or []) if isinstance(q, dict) and q.get("diametro")],
+           "tolleranze_geometriche": progetto.get("tolleranze_geometriche") if isinstance(progetto.get("tolleranze_geometriche"), dict) else None}
     for i, lav in enumerate(lavs):
         if isinstance(lav, dict) and not lav.get("sospesa") and i + 1 < len(storia) and not storia[i + 1].get("ok"):
             out["saltate"].append({"indice": i, "tipo": lav.get("tipo"), "motivo": storia[i + 1].get("dettaglio")})
@@ -75,7 +76,8 @@ def analizza(progetto):
                     "d": d_nom, "d_punta": d_punta, "filetto": filetto, "passo": PASSO.get(filetto) if filetto else None,
                     "passante": _passante(f) or prof >= spess - 1e-6, "prof": prof, "spessore": spess,
                     "lamatura": f.get("lamatura"), "svasatura": f.get("svasatura"), "tolleranza": f.get("tolleranza"),
-                    "da_sotto": sotto, "z_faccia": zbot if sotto else ztop, "funzione": lav.get("funzione")})
+                    "da_sotto": sotto, "z_faccia": zbot if sotto else ztop, "funzione": lav.get("funzione"),
+                    "in_opera": bool(lav.get("in_opera"))})
         elif tipo in ("tasca", "asola", "rialzo"):
             l2 = dict(lav, forma="asola") if tipo == "asola" else dict(lav)
             try:
@@ -155,6 +157,8 @@ def descrivi_foro(f, limiti=False):
         t += " — " + {"sede_cuscinetto": "cuscinetto ", "sede_boccola": "", "foro_spina": ""}[fz["tipo"]] + str(fz["componente"])
     if f["svasatura"]:
         t += ", svasatura Ø%s a %s°" % (_num(f["svasatura"]["d"]), _num(f["svasatura"].get("angolo", 90)))
+    if f.get("in_opera"):
+        t += " — preforo Ø%s, alesare in opera" % _num(f["d"] - 0.2)
     if f["da_sotto"]:
         t += " (dal lato opposto)"
     return t

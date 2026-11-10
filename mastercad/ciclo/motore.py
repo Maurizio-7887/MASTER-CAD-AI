@@ -151,10 +151,11 @@ def calcola(an, codice_materiale="S235", officina=None):
             n = _giri(m["vc_punta"], dp)
             fv = _f_punta(dp, m)
             tempo = sum((f["prof"] + 0.3 * dp + 2) / (fv * n) * (1.3 if f["prof"] > 3 * dp else 1) for f in gruppo) + 0.05 * len(gruppo)
-            op(lato, "Foratura Ø%s (%d fori)" % (_num(dp), len(gruppo)), T, n, int(fv * n), tempo,
+            opera = sum(1 for f in gruppo if f.get("in_opera"))
+            op(lato, "Foratura Ø%s (%d fori)%s" % (_num(dp), len(gruppo), " – %d prefori: alesatura in opera al montaggio" % opera if opera else ""), T, n, int(fv * n), tempo,
                {"tipo": "foratura", "d": dp, "fori": [f["rif"] for f in gruppo]})
         for f in fori_p:
-            if f["tolleranza"]:
+            if f["tolleranza"] and not f.get("in_opera"):
                 T = ut.prendi("alesatore%g" % f["d"], "Alesatore Ø%s %s, metallo duro" % (_num(f["d"]), f["tolleranza"]), f["d"])
                 n = _giri(m["vc_punta"] * 0.5, f["d"])
                 op(lato, "Alesatura Ø%s %s (foro %d)" % (_num(f["d"]), f["tolleranza"], f["rif"]), T, n, int(0.2 * n),
@@ -274,6 +275,13 @@ def piano_controllo(an):
     from ..tolleranze import iso286
     piano, visti = [], set()
     for f in an["fori"]:
+        if f.get("in_opera"):
+            if ("o", f["d"]) not in visti:
+                visti.add(("o", f["d"]))
+                n = sum(1 for g in an["fori"] if g.get("in_opera") and g["d"] == f["d"])
+                piano.append({"descrizione": "%d× preforo Ø%s per spina: alesato e controllato in opera al montaggio (tampone P/NP %s)" % (n, _num(f["d"] - 0.2), f["tolleranza"] or "H7"),
+                              "strumento": "Calibro (preforo)", "tempo": 0.1 * n})
+            continue
         for lim in limiti_foro(f):
             chiave = ("t", lim["testo"])
             n = sum(1 for g in an["fori"] if any(x["testo"] == lim["testo"] for x in limiti_foro(g)))
@@ -296,6 +304,10 @@ def piano_controllo(an):
             continue
         piano.append({"descrizione": "%s: anello P/NP o micrometro — %s ÷ %s (%s)" % (lim["testo"], _num3(lim["min"]), _num3(lim["max"]), q.get("perche", "")[:50]),
                       "strumento": "Micrometro / anello P/NP Ø%s %s" % (_num(q["diametro"]), q["sigla"]), "tempo": 0.5})
+    for v in (an.get("tolleranze_geometriche") or {}).get("voci") or []:
+        piano.append({"descrizione": "%s %s%s mm%s su %s: %s" % (v.get("nome", ""), "Ø" if v.get("diametrale") else "", ("%.3f" % float(v["valore"])).rstrip("0").rstrip(".").replace(".", ","),
+                                                                  (" rif. " + "|".join(v["riferimenti"])) if v.get("riferimenti") else "", v.get("elemento", ""), v.get("controllo", "")),
+                      "strumento": v.get("controllo", ""), "tempo": 1.5 if "CMM" in (v.get("controllo") or "") else 0.8})
     piano.append({"descrizione": "Ingombri, posizione fori e quote libere: calibro (ISO 2768-m)", "strumento": "Calibro a corsoio", "tempo": 1.0 + 0.05 * len(an["fori"])})
     return piano
 

@@ -5,7 +5,10 @@
 {% block testa %}<script src="{{ url_for('ar.static', filename='vendor/model-viewer-umd.min.js') }}"></script>
 <style>model-viewer{width:100%;height:min(60vh,520px);background:radial-gradient(circle at 50% 35%,#fff,#dfe5ea);border-radius:12px}
 .ed input,.ed select{padding:5px 6px;font-size:13px}.ed td{padding:4px}.prop{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #edeff0}.prop input{width:auto;margin-top:4px}
-#qr svg{width:150px;height:auto}</style>{% endblock %}
+#qr svg,#m-qr svg{width:150px;height:auto}
+.fcf{display:inline-flex;border:1.5px solid #1d2d3e;font:600 14px/1 system-ui;white-space:nowrap}.fcf b{padding:5px 7px;border-left:1.5px solid #1d2d3e}.fcf b:first-child{border-left:0;font-size:16px}
+.gdt-p{margin-top:12px}.gdt-p h3{margin:0 0 4px}.gdt-p small{color:#556b82}details summary{cursor:pointer;color:#0a6ed1;font-size:13px}
+.passi li{margin:8px 0}.passi .meta{font-size:12.5px;color:#556b82}</style>{% endblock %}
 {% block contenuto %}
 <div class="testa"><div class="titoli"><h1>Assiemi con lo scopo</h1>
 <p class="sotto">Metti i pezzi nell'assieme: il programma riconosce lo scopo dei fori e propone come montarli (spine di riferimento, viti, cuscinetti con il loro albero). Poi verifica giochi e interferenze al micron, presa di viti e spine, collisioni, e prepara la distinta base.</p></div>
@@ -29,6 +32,14 @@
       <model-viewer id="mv" camera-controls touch-action="pan-y" shadow-intensity="1" exposure="1.05" alt="Assieme 3D"></model-viewer>
       <div style="display:flex;gap:14px;align-items:center;margin-top:8px"><div id="qr"></div><p class="sotto" style="margin:0">Inquadra il QR con il telefono per vedere l'assieme sul tavolo, a grandezza reale. <a id="link-ar" target="_blank" rel="noopener">Apri il link</a></p></div></section>
     <section class="carta" id="verifiche" hidden><h2>Verifiche</h2><div class="scorri"><table class="dati" id="t-ver"></table></div></section>
+    <section class="carta" id="gdt" hidden><h2>Tolleranze geometriche dedotte dall'assieme</h2>
+      <p class="sotto">Calcolate da come i pezzi si montano (viti, spine, cuscinetti), con il perché, la norma e lo strumento di controllo, confrontate con la precisione delle macchine della tua officina. Aprendo un pezzo nel CAD finiscono in tavola, nel ciclo e nel piano di controllo.</p>
+      <div id="gdt-pezzi"></div></section>
+    <section class="carta" id="istr" hidden><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2 style="margin:0">Istruzioni di montaggio</h2>
+        <div class="azioni" style="margin:0"><button class="btn sec" id="m-aggiorna">Aggiorna avanzamento</button><button class="btn sec" id="m-stampa">Stampa</button></div></div>
+      <p id="m-sintesi" class="sotto"></p>
+      <div style="display:flex;gap:14px;align-items:center"><div id="m-qr"></div><p class="sotto" style="margin:0">Il montatore inquadra il QR: sul telefono vede un passo alla volta, il modello 3D con i pezzi del passo in arancio, e conferma «fatto» o «problema» con il suo nome. <a id="m-link" target="_blank" rel="noopener">Apri il montaggio guidato</a></p></div>
+      <ol class="passi" id="m-passi"></ol></section>
     <section class="carta" id="distinta" hidden><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Distinta base</h2><button class="btn sec" id="csv">Scarica CSV</button></div>
       <div class="scorri"><table class="dati" id="t-dist"></table></div><div id="generati"></div></section>
   </div>
