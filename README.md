@@ -19,6 +19,10 @@ Pagina **/disegno** (pulsante «📐 Disegno come AutoCAD» in alto):
 
 Codice: `mastercad/disegno/` (blueprint, pagina e motore comandi JS), `mastercad/reverse/` (blueprint e analisi della foto), `mastercad/profili.py` (dal 2D al solido CadQuery). Test: `tests/test_disegno_reverse.py`, `node tests/js/comandi.test.js`.
 
+## Novità: assiemi con lo scopo
+
+`/assiemi` (`mastercad/assiemi/`): i pezzi si montano da soli in base allo scopo dei loro fori. Il programma prova 4 rotazioni e il ribaltamento per allineare **fori spina** uguali (o passaggi vite sopra filetti), appoggia il pezzo sopra l'altro, mette **spine ISO 8734** e **viti ISO 4762** della lunghezza giusta (presa, avvitamento 1,5 d in acciaio / 2 d in alluminio, fondo del filetto) e, per ogni **sede cuscinetto**, il cuscinetto ISO 15 e un **albero generato** con il tratto k5 sotto l'anello interno e lo spallamento. Verifiche: giochi e interferenze degli anelli (tolleranze ISO 492 classe normale + ISO 286), presa delle spine, gioco dell'albero nel passaggio, collisioni fra tutti i componenti. Distinta base su più livelli (CSV), vista montata ed esplosa, AR con QR. L'albero generato si apre nel CAD: in tavola compare «Ø20 k5 (+0,011/+0,002)», nel ciclo la rettifica (o il terzista rettifiche), nel controllo l'anello P/NP. Test: `tests/test_assiemi.py`.
+
 ## Novità: il CAD che conosce lo scopo del pezzo e la tua officina
 
 Pensato per il metalmeccanico (costruttori di macchine automatiche). L'idea: **ogni quota ha il suo perché** e il programma segue il filo requisito → geometria → tolleranza → processo → controllo, sulle macchine e con le tariffe della tua officina. L'AI propone, il motore geometrico e normativo verifica: niente risposte inventate.

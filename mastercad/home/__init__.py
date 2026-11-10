@@ -13,6 +13,7 @@ GRUPPI = [
         ("/parla", "voce", "Progetta parlando", "Descrivi il pezzo a voce o per iscritto", None, False),
     ]),
     ("2 · Progetta con lo scopo", "Ogni quota ha il suo perché: componente, accoppiamento, norma, decisione.", "#7858ff", [
+        ("/assiemi", "assieme", "Assiemi con lo scopo", "Spine, viti e cuscinetti si montano da soli; giochi al micron, collisioni, distinta", "assiemi", False),
         ("/tolleranze", "calibro", "Accoppiamenti e tolleranze", "ISO 286, catene di tolleranza, cuscinetti, spine e boccole a catalogo", None, False),
         ("/fattibilita", "scudo", "Verifica fattibilità", "Pareti, fori al bordo, sedi, filetti, tolleranze costose, pezzo che non entra in macchina", "fattibilita", False),
         ("/versioni", "storia", "Versioni e decisioni", "Cosa è cambiato, chi l'ha deciso e con quale norma; torna a qualsiasi versione", None, False),
