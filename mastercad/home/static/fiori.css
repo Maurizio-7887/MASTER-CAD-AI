@@ -83,3 +83,10 @@ pre.codice{background:#0f1b2b;color:#cfe6ff;border-radius:10px;padding:12px;max-
 .shell a.aiuto{border-radius:50%;width:32px;height:32px;padding:0;display:inline-grid;place-items:center;font-weight:800}
 .manuale h2{scroll-margin-top:70px;border-bottom:3px solid var(--c,var(--blu));padding-bottom:4px;margin-top:6px}.manuale .carta{border-left:6px solid var(--c,var(--blu))}
 .manuale code{background:#eef1f4;border-radius:4px;padding:1px 5px;font-size:13px}.indice{columns:3;font-size:13.5px}@media(max-width:800px){.indice{columns:1}}
+
+/* finestra «Suggerisci» e avviso breve */
+dialog.dialogo{border:0;border-radius:14px;box-shadow:var(--ombra2);padding:20px;width:min(560px,92vw)}dialog.dialogo::backdrop{background:rgba(18,50,79,.45)}
+dialog.dialogo textarea{width:100%;font:inherit;padding:8px;border:1px solid var(--bordo);border-radius:8px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#12324f;color:#fff;padding:12px 18px;border-radius:10px;box-shadow:var(--ombra2);z-index:50}
+.shell a.sugg,.shell button.sugg{border-color:#ffd166;color:#ffd166}
+@media (max-width:760px){.shell .utente span:last-child,.shell .titolo{display:none}}

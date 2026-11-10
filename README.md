@@ -19,6 +19,11 @@ Pagina **/disegno** (pulsante «📐 Disegno come AutoCAD» in alto):
 
 Codice: `mastercad/disegno/` (blueprint, pagina e motore comandi JS), `mastercad/reverse/` (blueprint e analisi della foto), `mastercad/profili.py` (dal 2D al solido CadQuery). Test: `tests/test_disegno_reverse.py`, `node tests/js/comandi.test.js`.
 
+## Novità: utenti personali e segnalazioni
+
+- **Utenti** (`mastercad/utenti/`): ognuno entra con nome e password sua (hash, mai in chiaro). Password temporanea generata e mostrata una volta, cambio obbligatorio al primo accesso, blocco dopo 8 tentativi sbagliati in 10 minuti. L'amministratore entra con `MASTER_CAD_PASSWORD` (campo Utente vuoto) e gestisce gli utenti in `/utenti`. Utente iniziale: `luca` (tecnico).
+- **Segnalazioni** (`mastercad/segnalazioni/`): «💡 Suggerisci» in ogni pagina (tipo, testo, pagina, pezzo aperto e foto facoltativi); `/segnalazioni` con stato e risposta; export JSON delle aperte per lo sviluppo.
+
 ## Novità: tolleranze geometriche dedotte e montaggio guidato
 
 Dal montaggio dell'assieme (`mastercad/assiemi/gdt.py`, `istruzioni.py`):

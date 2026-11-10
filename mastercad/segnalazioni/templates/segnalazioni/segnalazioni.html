@@ -1,0 +1,13 @@
+{% extends "home/base.html" %}
+{% set aiuto = 'segnalazioni' %}
+{% block titolo %}Segnalazioni · MASTER CAD AI{% endblock %}
+{% block barra %}Suggerimenti e segnalazioni{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Suggerimenti e segnalazioni</h1>
+<p class="sotto">{% if admin %}Tutto quello che chi usa il programma ha segnalato: rispondi, cambia lo stato e scarica le aperte per lo sviluppo.{% else %}Le tue segnalazioni con la risposta. Per una nuova usa «💡 Suggerisci» in alto, da qualsiasi pagina: così si sa anche dove eri.{% endif %}</p></div>
+<div class="azioni"><button class="btn" id="s-nuova">💡 Nuova segnalazione</button>{% if admin %}<a class="btn sec" href="/api/segnalazioni/esporta">Scarica le aperte per lo sviluppo (JSON)</a>{% endif %}
+<select id="s-filtro" style="width:180px"><option value="">Tutti gli stati</option>{% for s in stati %}<option>{{ s }}</option>{% endfor %}</select></div></div>
+<div id="msg" class="messaggio" hidden></div>
+<div id="s-lista" data-admin="{{ 1 if admin else 0 }}" data-stati="{{ stati|join('|') }}"></div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('segnalazioni.static', filename='segnalazioni.js') }}"></script>{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "home/base.html" %}
+{% set aiuto = 'utenti' %}
+{% block titolo %}Utenti · MASTER CAD AI{% endblock %}
+{% block barra %}Utenti{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Utenti</h1>
+<p class="sotto">Chi può entrare con nome e password personali. La password temporanea si vede una volta sola: mandala all'utente, al primo accesso la cambia. Tu entri sempre con la password del servizio.</p></div></div>
+<div id="msg" class="messaggio" hidden></div>
+<div class="griglia" style="grid-template-columns:minmax(300px,380px) 1fr">
+  <section class="carta"><h2>Nuovo utente</h2>
+    <label>Nome utente (per entrare)<input id="u-user" placeholder="es. luca" autocomplete="off"></label>
+    <label>Nome da mostrare<input id="u-nome" placeholder="es. Luca"></label>
+    <label>Ruolo<select id="u-ruolo"><option value="tecnico">Tecnico: usa il CAD e manda segnalazioni</option><option value="admin">Amministratore: anche utenti e segnalazioni di tutti</option></select></label>
+    <div class="azioni"><button class="btn" id="u-crea">Crea e genera la password</button></div>
+    <div id="u-pw" hidden class="messaggio ok"></div></section>
+  <section class="carta"><h2>Elenco</h2><div class="scorri"><table class="dati" id="u-tab"></table></div></section>
+</div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('utenti.static', filename='utenti.js') }}"></script>{% endblock %}

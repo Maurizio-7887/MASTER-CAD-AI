@@ -4,7 +4,8 @@
 <link rel="stylesheet" href="{{ url_for('home.static', filename='fiori.css') }}">
 {% block testa %}{% endblock %}
 </head>
-<body data-csrf="{{ csrf }}">
+{% set io = session.get('utente') if session.get('ok') else None %}
+<body data-csrf="{{ csrf }}" data-utente="{{ io.nome if io else '' }}">
 <header class="shell">
   <a class="logo" href="/">MASTER <b>CAD AI</b></a>
   {% if not home %}<a class="bottone" href="/" title="Torna alla home">⌂ Home</a>{% endif %}
@@ -13,7 +14,10 @@
   {% set sezione = aiuto if aiuto is defined else (request.blueprint if request.blueprint not in ('home', None) else 'come-si-lavora') %}
   <a class="bottone aiuto" href="/manuale#{{ sezione }}" title="Manuale: come si usa questa pagina">?</a>
   {% set allievo = session.get('allievo') if not session.get('ok') else None %}
-  <span class="utente"><span class="avatar">{{ (allievo.nome[:1] if allievo else 'U')|upper }}</span><span>{{ allievo.nome if allievo else 'Ufficio tecnico' }}</span></span>
+  {% if io %}<button type="button" class="sugg" id="suggerisci" title="Idea, errore, calcolo da correggere: scrivilo qui">💡 Suggerisci</button>
+  {% if io.ruolo == 'admin' %}<a class="bottone" href="/utenti" title="Utenti e password">Utenti</a>{% endif %}{% endif %}
+  {% set nome_vis = allievo.nome if allievo else (io.nome if io else 'Ufficio tecnico') %}
+  <span class="utente"><a href="{{ '/cambia-password' if io and io.username != 'admin' else '#' }}" class="avatar" style="text-decoration:none" title="{{ 'Cambia password' if io and io.username != 'admin' else nome_vis }}">{{ nome_vis[:1]|upper }}</a><span>{{ nome_vis }}</span></span>
   <button type="button" id="esci">Esci</button>
 </header>
 <main class="pagina">
