@@ -48,7 +48,8 @@ def analizza(progetto):
            "ingombro": {"x": bb.xlen, "y": bb.ylen, "z": bb.zlen, "xmin": bb.xmin, "ymin": bb.ymin, "zmin": bb.zmin,
                         "xmax": bb.xmax, "ymax": bb.ymax, "zmax": bb.zmax},
            "volume": solido.Volume(), "volume_pieno": pieno.Volume(),
-           "fori": [], "tasche": [], "rialzi": [], "spigoli": [], "guscio": None, "saltate": []}
+           "fori": [], "tasche": [], "rialzi": [], "spigoli": [], "guscio": None, "saltate": [],
+           "quote_funzionali": [q for q in (progetto.get("quote_funzionali") or []) if isinstance(q, dict) and q.get("diametro")]}
     for i, lav in enumerate(lavs):
         if isinstance(lav, dict) and not lav.get("sospesa") and i + 1 < len(storia) and not storia[i + 1].get("ok"):
             out["saltate"].append({"indice": i, "tipo": lav.get("tipo"), "motivo": storia[i + 1].get("dettaglio")})

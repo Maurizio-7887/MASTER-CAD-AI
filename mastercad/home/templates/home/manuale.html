@@ -8,7 +8,7 @@
 <p class="sotto">MASTER CAD AI porta dallo scopo del pezzo al pezzo prodotto. Ogni pagina ha il «?» in alto a destra che porta qui, alla sezione giusta.</p>
 <section class="carta" style="--c:#556b82"><h3>Indice</h3><ul class="indice">
   <li><a href="#come-si-lavora">Come si lavora</a></li><li><a href="#reverse">Dalla foto al 3D</a></li><li><a href="#disegno">Disegno CAD e comandi</a></li>
-  <li><a href="#progetto">Indicazioni del tecnico</a></li><li><a href="#scopo">Lo scopo delle quote</a></li><li><a href="#tolleranze">Accoppiamenti e tolleranze</a></li>
+  <li><a href="#progetto">Indicazioni del tecnico</a></li><li><a href="#scopo">Lo scopo delle quote</a></li><li><a href="#assiemi">Assiemi con lo scopo</a></li><li><a href="#tolleranze">Accoppiamenti e tolleranze</a></li>
   <li><a href="#generativo">Dal carico alla forma</a></li><li><a href="#libreria">Libreria a norma</a></li><li><a href="#fattibilita">Verifica fattibilità</a></li>
   <li><a href="#versioni">Versioni e decisioni</a></li><li><a href="#officina">La mia officina</a></li><li><a href="#tavola">Disegno tecnico</a></li>
   <li><a href="#ciclo">Ciclo di lavoro e CNC</a></li><li><a href="#preventivo">Preventivo</a></li><li><a href="#qualita">Controllo qualità</a></li><li><a href="#ar">Realtà aumentata</a></li>
@@ -47,6 +47,13 @@
 <section class="carta" style="--c:#7858ff"><h2 id="scopo">Lo scopo delle quote</h2>
 <p>Nell'albero delle lavorazioni ogni foro ha il pulsante <b>Scopo</b>: scegli perché esiste (sede cuscinetto, foro spina, sede boccola, passaggio vite, filetto, quota libera) e il componente. Prima di confermare vedi <b>cosa cambia</b>: misure, nuovi problemi di fattibilità, volume. Esempio: passare da cuscinetto 6204 a 6205 allarga la sede da Ø47 a Ø52 e il programma ti avvisa se la parete verso il bordo diventa troppo sottile.</p>
 <p>Lo scopo arriva ovunque: tolleranza con i limiti nella tabella fori della tavola, barenatura o alesatura nel ciclo, tampone passa/non passa nel piano di controllo, norma citata nel registro delle decisioni.</p></section>
+
+<section class="carta" style="--c:#7858ff"><h2 id="assiemi">Assiemi con lo scopo</h2>
+<ol><li>Prepara i pezzi nel CAD dando lo scopo ai fori: <code>foro spina Ø8</code> nei due pezzi da centrare, <code>passaggio vite M8</code> (Scopo) nel pezzo sopra e <code>foro M8 filettato</code> in quello sotto, <code>sede cuscinetto 6204</code> dove gira un albero.</li>
+<li>Nella pagina Assiemi aggiungi i pezzi («pezzo aperto nel CAD» o un progetto salvato con una versione). Il primo è la base fissa.</li>
+<li>«Proponi i montaggi»: il programma cerca come appoggiare ogni pezzo sugli altri (4 rotazioni, anche capovolto) in modo che spine e viti coincidano, e propone cuscinetto e albero per ogni sede.</li>
+<li>«Monta e verifica»: mette spine ISO 8734 e viti ISO 4762 della lunghezza giusta, il cuscinetto e l'albero (con il tratto k5 sotto l'anello interno), poi verifica: giochi e interferenze degli anelli (ISO 492 + ISO 286), presa delle spine, avvitamento delle viti (1–2 d), gioco dell'albero nel passaggio, collisioni fra tutti i pezzi.</li>
+<li>Vedi l'assieme montato o esploso, anche in AR con il QR, e scarichi la distinta base (CSV). L'albero generato si apre nel CAD per tavola, ciclo (con la rettifica del tratto k5) e preventivo.</li></ol></section>
 
 <section class="carta" style="--c:#7858ff"><h2 id="tolleranze">Accoppiamenti e tolleranze</h2>
 <p>Calcolo di giochi e interferenze ISO 286 (es. Ø20 H7/g6), catene di tolleranza nel caso peggiore e statistico, tabelle di cuscinetti, spine e accoppiamenti tipici delle macchine automatiche.</p></section>

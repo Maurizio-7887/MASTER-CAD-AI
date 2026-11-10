@@ -1,0 +1,37 @@
+{% extends "home/base.html" %}
+{% set aiuto = 'assiemi' %}
+{% block titolo %}Assiemi con lo scopo · MASTER CAD AI{% endblock %}
+{% block barra %}Assiemi con lo scopo{% endblock %}
+{% block testa %}<script src="{{ url_for('ar.static', filename='vendor/model-viewer-umd.min.js') }}"></script>
+<style>model-viewer{width:100%;height:min(60vh,520px);background:radial-gradient(circle at 50% 35%,#fff,#dfe5ea);border-radius:12px}
+.ed input,.ed select{padding:5px 6px;font-size:13px}.ed td{padding:4px}.prop{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #edeff0}.prop input{width:auto;margin-top:4px}
+#qr svg{width:150px;height:auto}</style>{% endblock %}
+{% block contenuto %}
+<div class="testa"><div class="titoli"><h1>Assiemi con lo scopo</h1>
+<p class="sotto">Metti i pezzi nell'assieme: il programma riconosce lo scopo dei fori e propone come montarli (spine di riferimento, viti, cuscinetti con il loro albero). Poi verifica giochi e interferenze al micron, presa di viti e spine, collisioni, e prepara la distinta base.</p></div>
+<div class="azioni"><input id="a-nome" placeholder="Nome dell'assieme" style="width:240px"><button class="btn sec" id="a-nuovo">Nuovo</button><button class="btn" id="a-salva">Salva</button><select id="a-aperti" style="width:220px"><option value="">Apri un assieme salvato…</option></select></div></div>
+<div id="msg" class="messaggio" hidden></div>
+<div class="griglia" style="grid-template-columns:minmax(340px,480px) 1fr">
+  <div>
+    <section class="carta"><h2>1 · Pezzi</h2>
+      <div class="scorri"><table class="dati ed" id="t-pezzi"></table></div>
+      <div class="azioni"><button class="btn sec" id="add-aperto">+ Pezzo aperto nel CAD</button><select id="add-versione" style="width:220px"><option value="">+ Da un progetto salvato…</option></select></div>
+      <p class="sotto" style="font-size:12.5px;margin-top:8px">Il primo pezzo è la base fissa. Per preparare un pezzo: aprilo o crealo nel CAD (libreria, foto, disegno), dai lo scopo ai fori (spine, viti, cuscinetti) e torna qui.</p></section>
+    <section class="carta"><h2>2 · Come si monta</h2>
+      <div class="azioni" style="margin-top:0"><button class="btn" id="proponi">Proponi i montaggi</button></div>
+      <div id="proposte"></div>
+      <div class="azioni"><button class="btn" id="monta" hidden>Monta e verifica</button></div></section>
+  </div>
+  <div>
+    <section class="carta" id="vista" hidden>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2 style="margin:0">Assieme</h2>
+        <div class="azioni" style="margin:0"><button class="btn sec" id="v-normale">Montato</button><button class="btn sec" id="v-esploso">Esploso</button></div></div>
+      <model-viewer id="mv" camera-controls touch-action="pan-y" shadow-intensity="1" exposure="1.05" alt="Assieme 3D"></model-viewer>
+      <div style="display:flex;gap:14px;align-items:center;margin-top:8px"><div id="qr"></div><p class="sotto" style="margin:0">Inquadra il QR con il telefono per vedere l'assieme sul tavolo, a grandezza reale. <a id="link-ar" target="_blank" rel="noopener">Apri il link</a></p></div></section>
+    <section class="carta" id="verifiche" hidden><h2>Verifiche</h2><div class="scorri"><table class="dati" id="t-ver"></table></div></section>
+    <section class="carta" id="distinta" hidden><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Distinta base</h2><button class="btn sec" id="csv">Scarica CSV</button></div>
+      <div class="scorri"><table class="dati" id="t-dist"></table></div><div id="generati"></div></section>
+  </div>
+</div>
+{% endblock %}
+{% block script %}<script src="{{ url_for('assiemi.static', filename='assiemi.js') }}"></script>{% endblock %}

@@ -233,6 +233,12 @@ def calcola(an, codice_materiale="S235", officina=None):
         fasi.append(dict(_fase(mac_b), n=30, nome="Forature e fresature trasversali", operazioni=lato_b))
     elif lato_b:
         fasi.append(dict(_fase(mac_a), n=30, nome="Lavorazione lato B (pezzo girato)", operazioni=lato_b))
+    rettifiche = [q for q in an.get("quote_funzionali") or [] if q.get("sigla") and int("".join(c for c in q["sigla"] if c.isdigit()) or 9) <= 6]
+    if rettifiche:
+        mac_r = scegli_macchina(off, "rettifica", (max(q["diametro"] for q in rettifiche) + 10, an["ingombro"]["x"]))
+        ops = [{"descrizione": "Rettifica cilindrica Ø%s %s, lunghezza %s mm (%s)" % (_num(q["diametro"]), q["sigla"], _num(float(q["a"]) - float(q["da"])), q.get("perche", "")[:60]),
+                "T": None, "giri": None, "vf": None, "tempo": round(2.0 + (float(q["a"]) - float(q["da"])) * 0.08, 2), "dati": {"tipo": "rettifica"}} for q in rettifiche]
+        fasi.append(dict(_fase(mac_r), n=fasi[-1]["n"] + 10, nome="Rettifica", operazioni=ops))
     n_part = len(an["fori"]) + len(an["tasche"]) + len(an["spigoli"])
     fasi.append({"n": fasi[-1]["n"] + 10, "nome": "Sbavatura e pulizia", "macchina": "Banco", "costo_ora": banco, "tipo_fase": "banco",
                  "operazioni": [{"descrizione": "Sbavatura spigoli e fori, soffiatura", "T": None, "giri": None, "vf": None,
@@ -265,6 +271,7 @@ def _officina_predefinita():
 def piano_controllo(an):
     """Cosa controllare e con che strumento: tamponi P/NP per i fori in tolleranza, tamponi filettati, calibro per il resto."""
     from ..tolleranze.funzioni import limiti_foro
+    from ..tolleranze import iso286
     piano, visti = [], set()
     for f in an["fori"]:
         for lim in limiti_foro(f):
@@ -280,6 +287,15 @@ def piano_controllo(an):
             n = sum(1 for g in an["fori"] if g["filetto"] == f["filetto"])
             piano.append({"descrizione": "%d× filetto %s 6H: tampone filettato P/NP" % (n, f["filetto"]), "strumento": "Tampone filettato %s 6H" % f["filetto"],
                           "tempo": 0.25 * n})
+    for q in an.get("quote_funzionali") or []:
+        if not q.get("sigla"):
+            continue
+        try:
+            lim = iso286.limiti(q["diametro"], q["sigla"])
+        except ValueError:
+            continue
+        piano.append({"descrizione": "%s: anello P/NP o micrometro — %s ÷ %s (%s)" % (lim["testo"], _num3(lim["min"]), _num3(lim["max"]), q.get("perche", "")[:50]),
+                      "strumento": "Micrometro / anello P/NP Ø%s %s" % (_num(q["diametro"]), q["sigla"]), "tempo": 0.5})
     piano.append({"descrizione": "Ingombri, posizione fori e quote libere: calibro (ISO 2768-m)", "strumento": "Calibro a corsoio", "tempo": 1.0 + 0.05 * len(an["fori"])})
     return piano
 

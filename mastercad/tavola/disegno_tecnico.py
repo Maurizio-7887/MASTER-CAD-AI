@@ -16,6 +16,7 @@ from OCP.HLRBRep import HLRBRep_Algo, HLRBRep_HLRToShape
 from ..materiali import materiale as dati_materiale
 from ..progetto import lavorazioni as L
 from ..progetto.analisi import _num, descrivi_foro, gruppi_fori
+from ..tolleranze.iso286 import limiti as iso286_limiti
 
 FOGLIO = (420.0, 297.0)                       # A3 orizzontale
 SCALE = [(10, "10:1"), (5, "5:1"), (2, "2:1"), (1, "1:1"), (0.5, "1:2"), (0.2, "1:5"), (0.1, "1:10"), (0.05, "1:20"), (0.02, "1:50")]
@@ -375,15 +376,28 @@ def genera(an, info):
         c = d.get("centro") or [0, 0]
         misura = "Ø" + _num(d["d"]) if d.get("forma") == "cerchio" else "%s×%s" % (_num(d.get("l", 0)), _num(d.get("w", 0)))
         note.append("Rialzo %s alto %s, centro (%s; %s)." % (misura, _num(r["h"]), _num(c[0]), _num(c[1])))
+    for q in an.get("quote_funzionali") or []:
+        if q.get("sigla"):
+            try:
+                lim = iso286_limiti(q["diametro"], q["sigla"])
+                note.append("%s tra %s e %s mm: %s." % (lim["testo"], _num(q["da"]), _num(q["a"]), q.get("perche", "")))
+            except ValueError:
+                pass
+        else:
+            note.append("Ø%s tra %s e %s mm: %s." % (_num(q["diametro"]), _num(q["da"]), _num(q["a"]), q.get("perche", "")))
     if an["guscio"]:
         note.append("Svuotato con pareti di %s mm (aperto %s)." % (_num(an["guscio"]["spessore"]), an["guscio"]["aperta"]))
     if any(f["tolleranza"] for f in an["fori"]):
         note.append("Fori con tolleranza: controllo con tampone passa/non passa.")
     yn = 66
     t.tx((26, yn + 1), "NOTE", 3, "start", 0, "testo")
+    import textwrap
     for i, n in enumerate(note[:12]):
-        yn -= 4.6
-        t.tx((26, yn), "%d. %s" % (i + 1, n), 2.6, "start", 0, "testo")
+        for k, riga in enumerate(textwrap.wrap("%d. %s" % (i + 1, n), 92)):
+            if yn < 16:
+                break
+            yn -= 4.0 if k else 4.6
+            t.tx((26 + (4 if k else 0), yn), riga, 2.6, "start", 0, "testo")
 
     # ── cartiglio ──
     x0, y0, x1, y1 = 230.0, 10.0, FW - 10, 62.0
